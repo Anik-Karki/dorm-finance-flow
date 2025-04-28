@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Card,
@@ -30,15 +29,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
-  Separator,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui";
-import { Plus, Trash2, Edit, Save, AlertTriangle } from "lucide-react";
+} from "@/components/ui/select";
+import { Plus, Trash2, Edit, Save, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 
 // Mock service items data

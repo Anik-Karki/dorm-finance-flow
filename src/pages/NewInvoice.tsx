@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { Invoice } from '@/types';
 
 const monthsArray = [
   '01-2024', '02-2024', '03-2024', '04-2024', '05-2024',
@@ -46,7 +46,7 @@ const NewInvoice = () => {
     baseFee: 0,
     extraExpenses: [],
     totalAmount: 0,
-    status: 'unpaid',
+    status: 'unpaid' as 'paid' | 'partially_paid' | 'unpaid' | 'overdue',
     paidAmount: 0,
     balanceAmount: 0
   });

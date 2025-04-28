@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
@@ -78,7 +77,7 @@ const Reports = () => {
       amount: inv.balanceAmount,
       status: inv.status
     }))
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.due))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 20); // Limit to 20 entries
   
   // Advance balance report
