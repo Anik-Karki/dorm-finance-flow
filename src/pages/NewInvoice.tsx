@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
@@ -23,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
-import { Invoice } from '@/types';
+import { Invoice, ExtraExpense } from '@/types';
+import { Plus, Trash2 } from 'lucide-react';
 
 const monthsArray = [
   '01-2024', '02-2024', '03-2024', '04-2024', '05-2024',
@@ -44,11 +46,17 @@ const NewInvoice = () => {
     issueDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     baseFee: 0,
-    extraExpenses: [],
+    extraExpenses: [] as ExtraExpense[],
     totalAmount: 0,
     status: 'unpaid' as 'paid' | 'partially_paid' | 'unpaid' | 'overdue',
     paidAmount: 0,
     balanceAmount: 0
+  });
+  
+  const [newExpense, setNewExpense] = useState({
+    description: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0]
   });
   
   const selectedStudent = students.find(student => student.id === invoiceData.studentId);
@@ -63,6 +71,61 @@ const NewInvoice = () => {
       }));
     }
   }, [invoiceData.studentId, selectedStudent]);
+
+  const updateTotalAmount = () => {
+    const extraExpensesTotal = invoiceData.extraExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const total = invoiceData.baseFee + extraExpensesTotal;
+    
+    setInvoiceData(prev => ({
+      ...prev,
+      totalAmount: total,
+      balanceAmount: total
+    }));
+  };
+  
+  const addExtraExpense = () => {
+    if (!newExpense.description.trim()) {
+      toast.error('Please enter a description for the expense');
+      return;
+    }
+    
+    if (newExpense.amount <= 0) {
+      toast.error('Please enter a valid amount for the expense');
+      return;
+    }
+    
+    const expense: ExtraExpense = {
+      id: Date.now().toString(36),
+      description: newExpense.description,
+      amount: newExpense.amount,
+      date: newExpense.date
+    };
+    
+    setInvoiceData(prev => ({
+      ...prev,
+      extraExpenses: [...prev.extraExpenses, expense]
+    }));
+    
+    // Reset the new expense form
+    setNewExpense({
+      description: '',
+      amount: 0,
+      date: new Date().toISOString().split('T')[0]
+    });
+    
+    // Update total amount
+    setTimeout(updateTotalAmount, 0);
+  };
+  
+  const removeExtraExpense = (id: string) => {
+    setInvoiceData(prev => ({
+      ...prev,
+      extraExpenses: prev.extraExpenses.filter(exp => exp.id !== id)
+    }));
+    
+    // Update total amount
+    setTimeout(updateTotalAmount, 0);
+  };
   
   const handleCreateInvoice = () => {
     // Validation
@@ -190,8 +253,8 @@ const NewInvoice = () => {
                   setInvoiceData({
                     ...invoiceData,
                     baseFee: fee,
-                    totalAmount: fee,
-                    balanceAmount: fee
+                    totalAmount: fee + invoiceData.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                    balanceAmount: fee + invoiceData.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0)
                   });
                 }}
                 disabled={!invoiceData.studentId}
@@ -222,6 +285,74 @@ const NewInvoice = () => {
             </div>
           )}
           
+          {/* Extra Expenses Section */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Extra Expenses</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="expenseDescription">Description</Label>
+                <Input
+                  id="expenseDescription"
+                  value={newExpense.description}
+                  onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                  placeholder="e.g., Extra Food, Laundry, etc."
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="expenseAmount">Amount</Label>
+                <Input
+                  id="expenseAmount"
+                  type="number"
+                  value={newExpense.amount || ''}
+                  onChange={(e) => setNewExpense({...newExpense, amount: Number(e.target.value)})}
+                  placeholder="Amount"
+                />
+              </div>
+              
+              <div className="flex items-end">
+                <Button type="button" onClick={addExtraExpense} className="w-full">
+                  <Plus className="mr-2 h-4 w-4" /> Add Expense
+                </Button>
+              </div>
+            </div>
+            
+            {invoiceData.extraExpenses.length > 0 && (
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted text-muted-foreground">
+                    <tr>
+                      <th className="p-2 text-left font-medium">Description</th>
+                      <th className="p-2 text-right font-medium">Amount</th>
+                      <th className="p-2 text-right font-medium w-20">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceData.extraExpenses.map((expense) => (
+                      <tr key={expense.id} className="border-t">
+                        <td className="p-2">{expense.description}</td>
+                        <td className="p-2 text-right">{formatCurrency(expense.amount)}</td>
+                        <td className="p-2 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeExtraExpense(expense.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          
           <div className="bg-muted/50 p-4 rounded-md">
             <h3 className="font-semibold mb-2">Invoice Summary</h3>
             <div className="space-y-2">
@@ -231,7 +362,11 @@ const NewInvoice = () => {
               </div>
               <div className="flex justify-between">
                 <span>Extra Expenses:</span>
-                <span>₹0.00</span>
+                <span>
+                  {formatCurrency(
+                    invoiceData.extraExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+                  )}
+                </span>
               </div>
               <div className="flex justify-between font-bold">
                 <span>Total Amount:</span>
