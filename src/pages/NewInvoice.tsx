@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,6 +15,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -23,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Invoice, ExtraExpense } from '@/types';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -43,8 +51,8 @@ const NewInvoice = () => {
   const [invoiceData, setInvoiceData] = useState({
     studentId: preselectedStudentId || '',
     monthYear: '',
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    issueDate: new Date(),
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     baseFee: 0,
     extraExpenses: [] as ExtraExpense[],
     totalAmount: 0,
@@ -56,7 +64,7 @@ const NewInvoice = () => {
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0]
+    date: new Date()
   });
   
   const selectedStudent = students.find(student => student.id === invoiceData.studentId);
@@ -98,7 +106,7 @@ const NewInvoice = () => {
       id: Date.now().toString(36),
       description: newExpense.description,
       amount: newExpense.amount,
-      date: newExpense.date
+      date: newExpense.date.toISOString().split('T')[0]
     };
     
     setInvoiceData(prev => ({
@@ -110,7 +118,7 @@ const NewInvoice = () => {
     setNewExpense({
       description: '',
       amount: 0,
-      date: new Date().toISOString().split('T')[0]
+      date: new Date()
     });
     
     // Update total amount
@@ -142,6 +150,8 @@ const NewInvoice = () => {
     // Create the invoice
     addInvoice({
       ...invoiceData,
+      issueDate: invoiceData.issueDate.toISOString().split('T')[0],
+      dueDate: invoiceData.dueDate.toISOString().split('T')[0],
       studentName: selectedStudent?.name || '',
     });
     
@@ -217,29 +227,57 @@ const NewInvoice = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="issueDate">Issue Date</Label>
-              <Input
-                id="issueDate"
-                type="date"
-                value={invoiceData.issueDate}
-                onChange={(e) => setInvoiceData({
-                  ...invoiceData,
-                  issueDate: e.target.value
-                })}
-              />
+              <Label>Issue Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !invoiceData.issueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {invoiceData.issueDate ? format(invoiceData.issueDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={invoiceData.issueDate}
+                    onSelect={(date) => date && setInvoiceData({...invoiceData, issueDate: date})}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={invoiceData.dueDate}
-                onChange={(e) => setInvoiceData({
-                  ...invoiceData,
-                  dueDate: e.target.value
-                })}
-              />
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !invoiceData.dueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {invoiceData.dueDate ? format(invoiceData.dueDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={invoiceData.dueDate}
+                    onSelect={(date) => date && setInvoiceData({...invoiceData, dueDate: date})}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
