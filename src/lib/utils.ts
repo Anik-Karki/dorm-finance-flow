@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
+  return new Intl.NumberFormat('en-NP', {
     style: 'currency',
-    currency: 'INR',
+    currency: 'NPR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(amount);
@@ -17,7 +17,7 @@ export function formatCurrency(amount: number): string {
 
 export function formatDate(date: string | Date): string {
   if (!date) return '';
-  return new Date(date).toLocaleDateString('en-IN', {
+  return new Date(date).toLocaleDateString('en-NP', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
