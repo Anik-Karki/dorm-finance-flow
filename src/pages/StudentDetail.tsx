@@ -83,7 +83,7 @@ const StudentDetail = () => {
   const [newPayment, setNewPayment] = useState({
     amount: 0,
     date: new Date().toISOString().split('T')[0],
-    paymentMode: 'cash' as 'cash' | 'upi' | 'bank_transfer' | 'cheque',
+    paymentMode: 'cash' as 'cash' | 'esewa_khalti' | 'bank_transfer' | 'cheque',
     reference: '',
     notes: '',
     type: 'regular' as 'regular' | 'advance'
@@ -110,6 +110,9 @@ const StudentDetail = () => {
       type: 'regular'
     });
   };
+
+  // Check if reference field should be shown
+  const shouldShowReference = newPayment.paymentMode !== 'cash';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -301,26 +304,28 @@ const StudentDetail = () => {
                     value={newPayment.paymentMode}
                     onChange={(e) => setNewPayment({
                       ...newPayment,
-                      paymentMode: e.target.value as 'cash' | 'upi' | 'bank_transfer' | 'cheque'
+                      paymentMode: e.target.value as 'cash' | 'esewa_khalti' | 'bank_transfer' | 'cheque'
                     })}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
+                    <option value="esewa_khalti">eSewa/Khalti</option>
                     <option value="bank_transfer">Bank Transfer</option>
                     <option value="cheque">Cheque</option>
                   </select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Reference/Transaction ID</Label>
-                  <Input
-                    id="reference"
-                    value={newPayment.reference}
-                    onChange={(e) => setNewPayment({...newPayment, reference: e.target.value})}
-                    placeholder="Optional for Cash"
-                  />
-                </div>
+                {shouldShowReference && (
+                  <div className="space-y-2">
+                    <Label htmlFor="reference">Reference/Transaction ID</Label>
+                    <Input
+                      id="reference"
+                      value={newPayment.reference}
+                      onChange={(e) => setNewPayment({...newPayment, reference: e.target.value})}
+                      placeholder="Transaction ID"
+                    />
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="date">Payment Date</Label>
@@ -541,7 +546,7 @@ const StudentDetail = () => {
                         </TableCell>
                         <TableCell>
                           {payment.paymentMode === 'cash' ? 'Cash' : 
-                          payment.paymentMode === 'upi' ? 'UPI' :
+                          payment.paymentMode === 'esewa_khalti' ? 'eSewa/Khalti' :
                           payment.paymentMode === 'bank_transfer' ? 'Bank Transfer' : 'Cheque'}
                         </TableCell>
                         <TableCell>{payment.reference || '-'}</TableCell>

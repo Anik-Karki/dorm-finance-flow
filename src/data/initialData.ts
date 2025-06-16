@@ -202,8 +202,8 @@ export const initialPayments: Payment[] = [
     studentName: 'Ankit Patel',
     amount: 5500,
     date: '2024-04-02',
-    paymentMode: 'upi',
-    reference: 'UPI123456',
+    paymentMode: 'esewa_khalti',
+    reference: 'ESEWA123456',
     notes: 'Full payment for April',
     type: 'regular'
   },
@@ -235,8 +235,8 @@ export const initialPayments: Payment[] = [
     studentName: 'Priya Sharma',
     amount: 6500,
     date: '2024-03-07',
-    paymentMode: 'upi',
-    reference: 'UPI654321',
+    paymentMode: 'esewa_khalti',
+    reference: 'ESEWA654321',
     notes: 'Full payment for March',
     type: 'regular'
   },
@@ -341,7 +341,7 @@ export const initialLedger: LedgerEntry[] = [
     studentId: '3',
     studentName: 'Ankit Patel',
     type: 'payment',
-    description: 'Payment - upi (UPI123456)',
+    description: 'Payment - esewa_khalti (ESEWA123456)',
     amount: -5500,
     balance: 0
   },
