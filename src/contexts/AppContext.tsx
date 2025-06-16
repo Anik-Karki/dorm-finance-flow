@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Student, Invoice, Payment, ExtraExpense, LedgerEntry } from '@/types';
 import { initialStudents, initialInvoices, initialPayments, initialLedger } from '@/data/initialData';
@@ -79,7 +78,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return students.find(s => s.id === id);
   };
 
-  // Invoice Functions
+  // Enhanced Invoice Functions with Advance Payment Logic
   const addInvoice = (invoice: Omit<Invoice, 'id'>) => {
     const newInvoice = { ...invoice, id: generateId() };
     setInvoices(prev => [...prev, newInvoice]);
@@ -94,6 +93,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount: newInvoice.totalAmount,
       balance: newInvoice.totalAmount
     });
+    
+    // If advance payment was used, add a payment ledger entry
+    const advanceUsed = (newInvoice as any).advanceUsed || 0;
+    if (advanceUsed > 0) {
+      addLedgerEntry({
+        date: newInvoice.issueDate,
+        studentId: newInvoice.studentId,
+        studentName: newInvoice.studentName,
+        type: 'payment',
+        description: `Advance Payment Applied for ${newInvoice.monthYear}`,
+        amount: -advanceUsed,
+        balance: -advanceUsed
+      });
+    }
     
     toast.success(`Invoice for ${invoice.studentName} created successfully.`);
   };
@@ -153,16 +166,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success('Extra expense added successfully.');
   };
 
-  // Payment Functions
+  // Enhanced Payment Functions
   const addPayment = (payment: Omit<Payment, 'id'>) => {
     const newPayment = { ...payment, id: generateId() };
     setPayments(prev => [...prev, newPayment]);
     
     if (payment.type === 'regular') {
-      // Update relevant invoices
+      // Update relevant invoices with improved logic
+      let remainingPayment = payment.amount;
+      
       setInvoices(prev => prev.map(inv => {
-        if (inv.studentId === payment.studentId && inv.balanceAmount > 0) {
-          const paymentToApply = Math.min(payment.amount, inv.balanceAmount);
+        if (inv.studentId === payment.studentId && inv.balanceAmount > 0 && remainingPayment > 0) {
+          const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
+          remainingPayment -= paymentToApply;
+          
           const newPaidAmount = inv.paidAmount + paymentToApply;
           const newBalanceAmount = inv.totalAmount - newPaidAmount;
           const newStatus = newBalanceAmount <= 0 ? 'paid' : 
@@ -196,12 +213,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       studentId: payment.studentId,
       studentName: payment.studentName,
       type: 'payment',
-      description: `Payment - ${payment.paymentMode} ${payment.reference ? `(${payment.reference})` : ''}`,
-      amount: -payment.amount, // Negative because it's reducing the balance
+      description: `${payment.type === 'advance' ? 'Advance ' : ''}Payment - ${payment.paymentMode} ${payment.reference ? `(${payment.reference})` : ''}`,
+      amount: -payment.amount,
       balance: -payment.amount
     });
     
-    toast.success(`Payment of ₹${payment.amount.toLocaleString('en-IN')} recorded for ${payment.studentName}.`);
+    toast.success(`${payment.type === 'advance' ? 'Advance p' : 'P'}ayment of ${formatCurrency(payment.amount)} recorded for ${payment.studentName}.`);
   };
 
   const updatePayment = (payment: Payment) => {

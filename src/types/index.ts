@@ -1,4 +1,3 @@
-
 // Student Types
 export interface Student {
   id: string;
@@ -35,6 +34,7 @@ export interface Invoice {
   status: 'paid' | 'partially_paid' | 'unpaid' | 'overdue';
   paidAmount: number;
   balanceAmount: number;
+  advanceUsed?: number; // New field for tracking advance payment usage
 }
 
 // Payment Types
