@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/contexts/AppContext';
@@ -51,6 +50,7 @@ const NewInvoice = () => {
   const [invoiceData, setInvoiceData] = useState({
     studentId: preselectedStudentId || '',
     monthYear: '',
+    billingDate: new Date(), // New field for billing month calendar
     issueDate: new Date(),
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     baseFee: 0,
@@ -68,6 +68,17 @@ const NewInvoice = () => {
   });
   
   const selectedStudent = students.find(student => student.id === invoiceData.studentId);
+  
+  // Update monthYear when billingDate changes
+  useEffect(() => {
+    if (invoiceData.billingDate) {
+      const formattedMonth = format(invoiceData.billingDate, 'MM-yyyy');
+      setInvoiceData(prev => ({
+        ...prev,
+        monthYear: formattedMonth
+      }));
+    }
+  }, [invoiceData.billingDate]);
   
   useEffect(() => {
     if (selectedStudent) {
@@ -200,28 +211,30 @@ const NewInvoice = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="month">Billing Month</Label>
-              <Select
-                value={invoiceData.monthYear}
-                onValueChange={(value) => setInvoiceData({
-                  ...invoiceData,
-                  monthYear: value
-                })}
-              >
-                <SelectTrigger id="month">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Month & Year</SelectLabel>
-                    {monthsArray.map(month => (
-                      <SelectItem key={month} value={month}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <Label>Billing Month</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !invoiceData.billingDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {invoiceData.billingDate ? format(invoiceData.billingDate, "MMMM yyyy") : <span>Pick billing month</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={invoiceData.billingDate}
+                    onSelect={(date) => date && setInvoiceData({...invoiceData, billingDate: date})}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           
