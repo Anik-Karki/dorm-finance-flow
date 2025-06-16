@@ -44,7 +44,7 @@ export interface Payment {
   studentName: string;
   amount: number;
   date: string;
-  paymentMode: 'cash' | 'upi' | 'bank_transfer' | 'cheque';
+  paymentMode: 'cash' | 'esewa_khalti' | 'bank_transfer' | 'cheque';
   reference: string;
   notes: string;
   type: 'regular' | 'advance';
