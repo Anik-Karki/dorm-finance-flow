@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Student, Invoice, Payment, ExtraExpense, LedgerEntry } from '@/types';
 import { initialStudents, initialInvoices, initialPayments, initialLedger } from '@/data/initialData';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface AppContextProps {

@@ -1,264 +1,203 @@
 
-import { Student, Invoice, Payment, LedgerEntry, ExtraExpense } from '@/types';
+import { Student, Invoice, Payment, LedgerEntry } from '@/types';
 
 export const initialStudents: Student[] = [
   {
     id: '1',
-    name: 'Rahul Singh',
-    room: '101',
-    phone: '9876543210',
-    guardianName: 'Rajesh Singh',
-    guardianPhone: '9876543211',
-    address: '123 Main Street, Delhi',
-    enrollmentDate: '2023-07-15',
-    feeAmount: 6000,
+    name: 'Rajesh Kumar Sharma',
+    room: 'A-101',
+    phone: '9841234567',
+    guardianName: 'Ram Bahadur Sharma',
+    guardianPhone: '9851234567',
+    address: 'Baneshwor, Kathmandu',
+    enrollmentDate: '2024-01-15',
+    feeAmount: 8000,
     advanceBalance: 2000,
     status: 'active'
   },
   {
     id: '2',
-    name: 'Priya Sharma',
-    room: '102',
-    phone: '9876543212',
-    guardianName: 'Vikram Sharma',
-    guardianPhone: '9876543213',
-    address: '456 Park Avenue, Mumbai',
-    enrollmentDate: '2023-08-05',
-    feeAmount: 6500,
-    advanceBalance: 500,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Ankit Patel',
-    room: '201',
-    phone: '9876543214',
-    guardianName: 'Mahesh Patel',
-    guardianPhone: '9876543215',
-    address: '789 Lake Road, Ahmedabad',
-    enrollmentDate: '2023-06-20',
-    feeAmount: 5500,
-    advanceBalance: 5500,
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Neha Gupta',
-    room: '202',
-    phone: '9876543216',
-    guardianName: 'Ramesh Gupta',
-    guardianPhone: '9876543217',
-    address: '234 Hill View, Pune',
-    enrollmentDate: '2023-09-10',
-    feeAmount: 6000,
+    name: 'Sita Kumari Thapa',
+    room: 'B-205',
+    phone: '9812345678',
+    guardianName: 'Krishna Bahadur Thapa',
+    guardianPhone: '9862345678',
+    address: 'Patan Dhoka, Lalitpur',
+    enrollmentDate: '2024-02-10',
+    feeAmount: 7500,
     advanceBalance: 0,
     status: 'active'
   },
   {
+    id: '3',
+    name: 'Arjun Bahadur Gurung',
+    room: 'C-301',
+    phone: '9823456789',
+    guardianName: 'Bir Bahadur Gurung',
+    guardianPhone: '9873456789',
+    address: 'Pokhara Sub-Metropolitan City, Kaski',
+    enrollmentDate: '2024-01-20',
+    feeAmount: 8500,
+    advanceBalance: 5000,
+    status: 'active'
+  },
+  {
+    id: '4',
+    name: 'Anita Rai',
+    room: 'A-105',
+    phone: '9834567890',
+    guardianName: 'Santosh Kumar Rai',
+    guardianPhone: '9884567890',
+    address: 'Bhaktapur Durbar Square, Bhaktapur',
+    enrollmentDate: '2024-03-05',
+    feeAmount: 7000,
+    advanceBalance: 1500,
+    status: 'active'
+  },
+  {
     id: '5',
-    name: 'Suresh Kumar',
-    room: '301',
-    phone: '9876543218',
-    guardianName: 'Dinesh Kumar',
-    guardianPhone: '9876543219',
-    address: '567 College Road, Chennai',
-    enrollmentDate: '2023-07-01',
-    feeAmount: 5800,
-    advanceBalance: 1000,
+    name: 'Deepak Tamang',
+    room: 'B-202',
+    phone: '9845678901',
+    guardianName: 'Lal Bahadur Tamang',
+    guardianPhone: '9895678901',
+    address: 'Boudhanath, Kathmandu',
+    enrollmentDate: '2024-02-15',
+    feeAmount: 7800,
+    advanceBalance: 0,
+    status: 'inactive'
+  },
+  {
+    id: '6',
+    name: 'Sunita Karki',
+    room: 'C-305',
+    phone: '9856789012',
+    guardianName: 'Mohan Prasad Karki',
+    guardianPhone: '9906789012',
+    address: 'Thamel, Kathmandu',
+    enrollmentDate: '2024-01-30',
+    feeAmount: 8200,
+    advanceBalance: 3000,
+    status: 'active'
+  },
+  {
+    id: '7',
+    name: 'Bikash Shrestha',
+    room: 'A-103',
+    phone: '9867890123',
+    guardianName: 'Hari Krishna Shrestha',
+    guardianPhone: '9917890123',
+    address: 'Kirtipur Municipality, Kathmandu',
+    enrollmentDate: '2024-02-20',
+    feeAmount: 7600,
+    advanceBalance: 800,
+    status: 'active'
+  },
+  {
+    id: '8',
+    name: 'Priya Maharjan',
+    room: 'B-207',
+    phone: '9878901234',
+    guardianName: 'Keshav Maharjan',
+    guardianPhone: '9928901234',
+    address: 'Lalitpur Sub-Metropolitan City, Lalitpur',
+    enrollmentDate: '2024-03-10',
+    feeAmount: 8300,
+    advanceBalance: 0,
     status: 'active'
   }
 ];
 
-const createExtraExpense = (id: string, description: string, amount: number, date: string): ExtraExpense => {
-  return { id, description, amount, date };
-};
-
 export const initialInvoices: Invoice[] = [
   {
-    id: 'inv1',
+    id: 'inv-001',
     studentId: '1',
-    studentName: 'Rahul Singh',
-    monthYear: '04-2024',
-    issueDate: '2024-04-01',
-    dueDate: '2024-04-10',
-    baseFee: 6000,
+    studentName: 'Rajesh Kumar Sharma',
+    monthYear: '03-2024',
+    issueDate: '2024-03-01',
+    dueDate: '2024-03-10',
+    baseFee: 8000,
     extraExpenses: [
-      createExtraExpense('exp1', 'Extra Food', 500, '2024-04-05'),
-      createExtraExpense('exp2', 'Laundry', 300, '2024-04-08')
+      {
+        id: 'exp-001',
+        description: 'Electricity Bill',
+        amount: 500,
+        date: '2024-03-01'
+      }
     ],
-    totalAmount: 6800,
-    status: 'partially_paid',
-    paidAmount: 4000,
-    balanceAmount: 2800
-  },
-  {
-    id: 'inv2',
-    studentId: '2',
-    studentName: 'Priya Sharma',
-    monthYear: '04-2024',
-    issueDate: '2024-04-01',
-    dueDate: '2024-04-10',
-    baseFee: 6500,
-    extraExpenses: [
-      createExtraExpense('exp3', 'Stationery', 150, '2024-04-06')
-    ],
-    totalAmount: 6650,
-    status: 'overdue',
-    paidAmount: 0,
-    balanceAmount: 6650
-  },
-  {
-    id: 'inv3',
-    studentId: '3',
-    studentName: 'Ankit Patel',
-    monthYear: '04-2024',
-    issueDate: '2024-04-01',
-    dueDate: '2024-04-10',
-    baseFee: 5500,
-    extraExpenses: [],
-    totalAmount: 5500,
+    totalAmount: 8500,
     status: 'paid',
-    paidAmount: 5500,
+    paidAmount: 8500,
     balanceAmount: 0
   },
   {
-    id: 'inv4',
-    studentId: '4',
-    studentName: 'Neha Gupta',
-    monthYear: '04-2024',
-    issueDate: '2024-04-01',
-    dueDate: '2024-04-10',
-    baseFee: 6000,
-    extraExpenses: [
-      createExtraExpense('exp4', 'Extra Food', 400, '2024-04-07'),
-      createExtraExpense('exp5', 'Internet Usage', 200, '2024-04-09')
-    ],
-    totalAmount: 6600,
+    id: 'inv-002',
+    studentId: '2',
+    studentName: 'Sita Kumari Thapa',
+    monthYear: '03-2024',
+    issueDate: '2024-03-01',
+    dueDate: '2024-03-10',
+    baseFee: 7500,
+    extraExpenses: [],
+    totalAmount: 7500,
     status: 'unpaid',
     paidAmount: 0,
-    balanceAmount: 6600
+    balanceAmount: 7500
   },
   {
-    id: 'inv5',
-    studentId: '5',
-    studentName: 'Suresh Kumar',
-    monthYear: '04-2024',
-    issueDate: '2024-04-01',
-    dueDate: '2024-04-10',
-    baseFee: 5800,
-    extraExpenses: [],
-    totalAmount: 5800,
-    status: 'paid',
-    paidAmount: 5800,
-    balanceAmount: 0
-  },
-  {
-    id: 'inv6',
-    studentId: '1',
-    studentName: 'Rahul Singh',
+    id: 'inv-003',
+    studentId: '3',
+    studentName: 'Arjun Bahadur Gurung',
     monthYear: '03-2024',
     issueDate: '2024-03-01',
     dueDate: '2024-03-10',
-    baseFee: 6000,
+    baseFee: 8500,
     extraExpenses: [
-      createExtraExpense('exp6', 'Extra Food', 600, '2024-03-15')
+      {
+        id: 'exp-002',
+        description: 'Internet Charges',
+        amount: 300,
+        date: '2024-03-01'
+      }
     ],
-    totalAmount: 6600,
-    status: 'paid',
-    paidAmount: 6600,
-    balanceAmount: 0
-  },
-  {
-    id: 'inv7',
-    studentId: '2',
-    studentName: 'Priya Sharma',
-    monthYear: '03-2024',
-    issueDate: '2024-03-01',
-    dueDate: '2024-03-10',
-    baseFee: 6500,
-    extraExpenses: [],
-    totalAmount: 6500,
-    status: 'paid',
-    paidAmount: 6500,
-    balanceAmount: 0
+    totalAmount: 8800,
+    status: 'partially_paid',
+    paidAmount: 4000,
+    balanceAmount: 4800
   }
 ];
 
 export const initialPayments: Payment[] = [
   {
-    id: 'pay1',
+    id: 'pay-001',
     studentId: '1',
-    studentName: 'Rahul Singh',
-    amount: 4000,
-    date: '2024-04-05',
-    paymentMode: 'cash',
-    reference: '',
-    notes: 'Partial payment for April',
-    type: 'regular'
-  },
-  {
-    id: 'pay2',
-    studentId: '3',
-    studentName: 'Ankit Patel',
-    amount: 5500,
-    date: '2024-04-02',
-    paymentMode: 'esewa_khalti',
-    reference: 'ESEWA123456',
-    notes: 'Full payment for April',
-    type: 'regular'
-  },
-  {
-    id: 'pay3',
-    studentId: '5',
-    studentName: 'Suresh Kumar',
-    amount: 5800,
-    date: '2024-04-03',
-    paymentMode: 'bank_transfer',
-    reference: 'NEFT789012',
-    notes: 'Full payment for April',
-    type: 'regular'
-  },
-  {
-    id: 'pay4',
-    studentId: '1',
-    studentName: 'Rahul Singh',
-    amount: 6600,
+    studentName: 'Rajesh Kumar Sharma',
+    amount: 8500,
     date: '2024-03-05',
-    paymentMode: 'cash',
-    reference: '',
-    notes: 'Full payment for March',
-    type: 'regular'
-  },
-  {
-    id: 'pay5',
-    studentId: '2',
-    studentName: 'Priya Sharma',
-    amount: 6500,
-    date: '2024-03-07',
     paymentMode: 'esewa_khalti',
-    reference: 'ESEWA654321',
-    notes: 'Full payment for March',
+    reference: 'ESW-2024030501',
+    notes: 'March 2024 fee payment',
     type: 'regular'
   },
   {
-    id: 'pay6',
-    studentId: '1',
-    studentName: 'Rahul Singh',
-    amount: 2000,
-    date: '2024-04-20',
-    paymentMode: 'cash',
-    reference: '',
-    notes: 'Advance payment',
-    type: 'advance'
+    id: 'pay-002',
+    studentId: '3',
+    studentName: 'Arjun Bahadur Gurung',
+    amount: 4000,
+    date: '2024-03-03',
+    paymentMode: 'bank_transfer',
+    reference: 'TXN-2024030301',
+    notes: 'Partial payment for March',
+    type: 'regular'
   },
   {
-    id: 'pay7',
-    studentId: '3',
-    studentName: 'Ankit Patel',
-    amount: 5500,
-    date: '2024-03-25',
-    paymentMode: 'bank_transfer',
-    reference: 'NEFT456789',
+    id: 'pay-003',
+    studentId: '6',
+    studentName: 'Sunita Karki',
+    amount: 3000,
+    date: '2024-02-28',
+    paymentMode: 'cash',
+    reference: '',
     notes: 'Advance payment',
     type: 'advance'
   }
@@ -266,113 +205,63 @@ export const initialPayments: Payment[] = [
 
 export const initialLedger: LedgerEntry[] = [
   {
-    id: 'led1',
-    date: '2024-04-01',
+    id: 'led-001',
+    date: '2024-03-01',
     studentId: '1',
-    studentName: 'Rahul Singh',
+    studentName: 'Rajesh Kumar Sharma',
     type: 'fee',
-    description: 'Monthly Fee for 04-2024',
-    amount: 6000,
-    balance: 6000
+    description: 'Monthly Fee for 03-2024',
+    amount: 8500,
+    balance: 8500
   },
   {
-    id: 'led2',
-    date: '2024-04-05',
+    id: 'led-002',
+    date: '2024-03-05',
     studentId: '1',
-    studentName: 'Rahul Singh',
-    type: 'expense',
-    description: 'Extra Food',
-    amount: 500,
-    balance: 6500
-  },
-  {
-    id: 'led3',
-    date: '2024-04-05',
-    studentId: '1',
-    studentName: 'Rahul Singh',
+    studentName: 'Rajesh Kumar Sharma',
     type: 'payment',
-    description: 'Payment - cash',
+    description: 'Payment - esewa_khalti (ESW-2024030501)',
+    amount: -8500,
+    balance: 0
+  },
+  {
+    id: 'led-003',
+    date: '2024-03-01',
+    studentId: '2',
+    studentName: 'Sita Kumari Thapa',
+    type: 'fee',
+    description: 'Monthly Fee for 03-2024',
+    amount: 7500,
+    balance: 7500
+  },
+  {
+    id: 'led-004',
+    date: '2024-03-01',
+    studentId: '3',
+    studentName: 'Arjun Bahadur Gurung',
+    type: 'fee',
+    description: 'Monthly Fee for 03-2024',
+    amount: 8800,
+    balance: 8800
+  },
+  {
+    id: 'led-005',
+    date: '2024-03-03',
+    studentId: '3',
+    studentName: 'Arjun Bahadur Gurung',
+    type: 'payment',
+    description: 'Payment - bank_transfer (TXN-2024030301)',
     amount: -4000,
-    balance: 2500
+    balance: 4800
   },
   {
-    id: 'led4',
-    date: '2024-04-08',
-    studentId: '1',
-    studentName: 'Rahul Singh',
-    type: 'expense',
-    description: 'Laundry',
-    amount: 300,
-    balance: 2800
-  },
-  {
-    id: 'led5',
-    date: '2024-04-01',
-    studentId: '2',
-    studentName: 'Priya Sharma',
-    type: 'fee',
-    description: 'Monthly Fee for 04-2024',
-    amount: 6500,
-    balance: 6500
-  },
-  {
-    id: 'led6',
-    date: '2024-04-06',
-    studentId: '2',
-    studentName: 'Priya Sharma',
-    type: 'expense',
-    description: 'Stationery',
-    amount: 150,
-    balance: 6650
-  },
-  {
-    id: 'led7',
-    date: '2024-04-01',
-    studentId: '3',
-    studentName: 'Ankit Patel',
-    type: 'fee',
-    description: 'Monthly Fee for 04-2024',
-    amount: 5500,
-    balance: 5500
-  },
-  {
-    id: 'led8',
-    date: '2024-04-02',
-    studentId: '3',
-    studentName: 'Ankit Patel',
+    id: 'led-006',
+    date: '2024-02-28',
+    studentId: '6',
+    studentName: 'Sunita Karki',
     type: 'payment',
-    description: 'Payment - esewa_khalti (ESEWA123456)',
-    amount: -5500,
-    balance: 0
-  },
-  {
-    id: 'led9',
-    date: '2024-04-01',
-    studentId: '5',
-    studentName: 'Suresh Kumar',
-    type: 'fee',
-    description: 'Monthly Fee for 04-2024',
-    amount: 5800,
-    balance: 5800
-  },
-  {
-    id: 'led10',
-    date: '2024-04-03',
-    studentId: '5',
-    studentName: 'Suresh Kumar',
-    type: 'payment',
-    description: 'Payment - bank_transfer (NEFT789012)',
-    amount: -5800,
-    balance: 0
-  },
-  {
-    id: 'led11',
-    date: '2024-04-20',
-    studentId: '1',
-    studentName: 'Rahul Singh',
-    type: 'payment',
-    description: 'Payment - cash (Advance payment)',
-    amount: -2000,
-    balance: -2000
+    description: 'Advance Payment - cash',
+    amount: -3000,
+    balance: -3000
   }
 ];
