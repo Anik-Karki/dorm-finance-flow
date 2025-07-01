@@ -57,6 +57,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
+  // Auto-generate monthly invoices
+  const generateMonthlyInvoices = () => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    const monthYearString = `${currentMonth.toString().padStart(2, '0')}-${currentYear}`;
+
+    students.forEach(student => {
+      if (student.status === 'active') {
+        // Check if invoice already exists for this month
+        const existingInvoice = invoices.find(inv => 
+          inv.studentId === student.id && inv.monthYear === monthYearString
+        );
+
+        if (!existingInvoice) {
+          // Create new invoice
+          const newInvoice: Invoice = {
+            id: generateId(),
+            studentId: student.id,
+            studentName: student.name,
+            monthYear: monthYearString,
+            issueDate: new Date().toISOString().split('T')[0],
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            baseFee: student.feeAmount,
+            extraExpenses: [],
+            totalAmount: student.feeAmount,
+            status: 'unpaid',
+            paidAmount: 0,
+            balanceAmount: student.feeAmount
+          };
+
+          // Apply advance payment if available
+          if (student.advanceBalance > 0) {
+            const advanceToUse = Math.min(student.advanceBalance, student.feeAmount);
+            newInvoice.paidAmount = advanceToUse;
+            newInvoice.balanceAmount = student.feeAmount - advanceToUse;
+            newInvoice.status = newInvoice.balanceAmount <= 0 ? 'paid' : 'partially_paid';
+            newInvoice.advanceUsed = advanceToUse;
+
+            // Update student advance balance
+            setStudents(prev => prev.map(s => 
+              s.id === student.id 
+                ? { ...s, advanceBalance: s.advanceBalance - advanceToUse }
+                : s
+            ));
+          }
+
+          setInvoices(prev => [...prev, newInvoice]);
+          
+          // Add ledger entries
+          addLedgerEntry({
+            date: newInvoice.issueDate,
+            studentId: student.id,
+            studentName: student.name,
+            type: 'fee',
+            description: `Monthly Fee for ${monthYearString}`,
+            amount: student.feeAmount,
+            balance: student.feeAmount
+          });
+
+          if (newInvoice.advanceUsed && newInvoice.advanceUsed > 0) {
+            addLedgerEntry({
+              date: newInvoice.issueDate,
+              studentId: student.id,
+              studentName: student.name,
+              type: 'payment',
+              description: `Advance Payment Applied for ${monthYearString}`,
+              amount: -newInvoice.advanceUsed,
+              balance: -newInvoice.advanceUsed
+            });
+          }
+        }
+      }
+    });
+  };
+
+  // Run monthly invoice generation on app start
+  useEffect(() => {
+    generateMonthlyInvoices();
+  }, []);
+
   // Student Functions
   const addStudent = (student: Omit<Student, 'id'>) => {
     const newStudent = { ...student, id: generateId() };
@@ -167,17 +248,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast.success('Extra expense added successfully.');
   };
 
-  // Enhanced Payment Functions
+  // Enhanced Payment Functions with better invoice handling
   const addPayment = (payment: Omit<Payment, 'id'>) => {
     const newPayment = { ...payment, id: generateId() };
     setPayments(prev => [...prev, newPayment]);
     
     if (payment.type === 'regular') {
-      // Update relevant invoices with improved logic
+      // For regular payments, update specific invoice or distribute across unpaid invoices
       let remainingPayment = payment.amount;
       
       setInvoices(prev => prev.map(inv => {
         if (inv.studentId === payment.studentId && inv.balanceAmount > 0 && remainingPayment > 0) {
+          // If specific invoice is targeted, prioritize it
           const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
           remainingPayment -= paymentToApply;
           

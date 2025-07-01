@@ -1,4 +1,10 @@
 // Student Types
+export interface ExtraService {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -11,6 +17,7 @@ export interface Student {
   feeAmount: number;
   advanceBalance: number;
   status: 'active' | 'inactive';
+  extraServices?: ExtraService[];
 }
 
 // Invoice and Billing Types
