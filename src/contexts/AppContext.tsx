@@ -57,6 +57,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
+  // Calculate cumulative dues for invoices
+  const updateCumulativeDues = () => {
+    const studentGroups = students.reduce((acc, student) => {
+      acc[student.id] = invoices
+        .filter(inv => inv.studentId === student.id)
+        .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
+      return acc;
+    }, {} as { [key: string]: Invoice[] });
+
+    setInvoices(prev => {
+      const updated = [...prev];
+      Object.values(studentGroups).forEach(studentInvoices => {
+        let cumulativeDue = 0;
+        studentInvoices.forEach(invoice => {
+          cumulativeDue += invoice.balanceAmount;
+          const index = updated.findIndex(inv => inv.id === invoice.id);
+          if (index !== -1) {
+            updated[index] = { ...updated[index], cumulativeDue };
+          }
+        });
+      });
+      return updated;
+    });
+  };
+
   // Auto-generate monthly invoices
   const generateMonthlyInvoices = () => {
     const currentDate = new Date();
@@ -133,16 +158,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Run monthly invoice generation on app start
+  // Run monthly invoice generation and cumulative due calculation on app start
   useEffect(() => {
     generateMonthlyInvoices();
+    updateCumulativeDues();
   }, []);
+
+  // Update cumulative dues when invoices change
+  useEffect(() => {
+    updateCumulativeDues();
+  }, [invoices.length]);
 
   // Student Functions
   const addStudent = (student: Omit<Student, 'id'>) => {
     const newStudent = { ...student, id: generateId() };
     setStudents(prev => [...prev, newStudent]);
-    toast.success(`Student ${student.name} added successfully.`);
+    toast.success(`Student ${student.name} added successfully with enhanced fee structure.`);
   };
 
   const updateStudent = (student: Student) => {
@@ -160,7 +191,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return students.find(s => s.id === id);
   };
 
-  // Enhanced Invoice Functions with Advance Payment Logic
+  // Enhanced Invoice Functions with better cumulative due tracking
   const addInvoice = (invoice: Omit<Invoice, 'id'>) => {
     const newInvoice = { ...invoice, id: generateId() };
     setInvoices(prev => [...prev, newInvoice]);
@@ -171,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       studentId: newInvoice.studentId,
       studentName: newInvoice.studentName,
       type: 'fee',
-      description: `Monthly Fee for ${newInvoice.monthYear}`,
+      description: `Invoice for ${newInvoice.monthYear}`,
       amount: newInvoice.totalAmount,
       balance: newInvoice.totalAmount
     });
@@ -190,7 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
     
-    toast.success(`Invoice for ${invoice.studentName} created successfully.`);
+    toast.success(`Invoice for ${invoice.studentName} created with smart payment processing.`);
   };
 
   const updateInvoice = (invoice: Invoice) => {
@@ -245,38 +276,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
     
-    toast.success('Extra expense added successfully.');
+    toast.success('Extra expense added with automatic recalculation.');
   };
 
-  // Enhanced Payment Functions with better invoice handling
+  // Enhanced Payment Functions with better invoice targeting
   const addPayment = (payment: Omit<Payment, 'id'>) => {
     const newPayment = { ...payment, id: generateId() };
     setPayments(prev => [...prev, newPayment]);
     
     if (payment.type === 'regular') {
-      // For regular payments, update specific invoice or distribute across unpaid invoices
+      // For regular payments, target specific invoice if provided, otherwise distribute
       let remainingPayment = payment.amount;
       
-      setInvoices(prev => prev.map(inv => {
-        if (inv.studentId === payment.studentId && inv.balanceAmount > 0 && remainingPayment > 0) {
-          // If specific invoice is targeted, prioritize it
-          const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
-          remainingPayment -= paymentToApply;
-          
-          const newPaidAmount = inv.paidAmount + paymentToApply;
-          const newBalanceAmount = inv.totalAmount - newPaidAmount;
-          const newStatus = newBalanceAmount <= 0 ? 'paid' : 
-                            newPaidAmount > 0 ? 'partially_paid' : 'unpaid';
-          
-          return {
-            ...inv,
-            paidAmount: newPaidAmount,
-            balanceAmount: newBalanceAmount,
-            status: newStatus
-          };
-        }
-        return inv;
-      }));
+      if (payment.invoiceId) {
+        // Target specific invoice
+        setInvoices(prev => prev.map(inv => {
+          if (inv.id === payment.invoiceId && remainingPayment > 0) {
+            const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
+            remainingPayment -= paymentToApply;
+            
+            const newPaidAmount = inv.paidAmount + paymentToApply;
+            const newBalanceAmount = inv.totalAmount - newPaidAmount;
+            const newStatus = newBalanceAmount <= 0 ? 'paid' : 
+                              newPaidAmount > 0 ? 'partially_paid' : 'unpaid';
+            
+            return {
+              ...inv,
+              paidAmount: newPaidAmount,
+              balanceAmount: newBalanceAmount,
+              status: newStatus
+            };
+          }
+          return inv;
+        }));
+      } else {
+        // Distribute across unpaid invoices (oldest first)
+        setInvoices(prev => prev.map(inv => {
+          if (inv.studentId === payment.studentId && inv.balanceAmount > 0 && remainingPayment > 0) {
+            const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
+            remainingPayment -= paymentToApply;
+            
+            const newPaidAmount = inv.paidAmount + paymentToApply;
+            const newBalanceAmount = inv.totalAmount - newPaidAmount;
+            const newStatus = newBalanceAmount <= 0 ? 'paid' : 
+                              newPaidAmount > 0 ? 'partially_paid' : 'unpaid';
+            
+            return {
+              ...inv,
+              paidAmount: newPaidAmount,
+              balanceAmount: newBalanceAmount,
+              status: newStatus
+            };
+          }
+          return inv;
+        }));
+      }
     } else if (payment.type === 'advance') {
       // Update student's advance balance
       setStudents(prev => prev.map(s => {
@@ -301,7 +355,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       balance: -payment.amount
     });
     
-    toast.success(`${payment.type === 'advance' ? 'Advance p' : 'P'}ayment of ${formatCurrency(payment.amount)} recorded for ${payment.studentName}.`);
+    toast.success(`${payment.type === 'advance' ? 'Advance p' : 'P'}ayment of ${formatCurrency(payment.amount)} processed successfully for ${payment.studentName}.`);
   };
 
   const updatePayment = (payment: Payment) => {

@@ -1,3 +1,4 @@
+
 // Student Types
 export interface ExtraService {
   id: string;
@@ -23,10 +24,11 @@ export interface Student {
   status: 'active' | 'inactive';
   extraServices?: ExtraService[];
   documents?: {
-    citizenship?: File | null;
+    idDocument?: File | null; // More flexible than citizenship
     photo?: File | null;
-    previousCertificate?: File | null;
+    educationCertificate?: File | null;
     medicalReport?: File | null;
+    otherDocument?: File | null;
   };
 }
 
@@ -51,7 +53,8 @@ export interface Invoice {
   status: 'paid' | 'partially_paid' | 'unpaid' | 'overdue';
   paidAmount: number;
   balanceAmount: number;
-  advanceUsed?: number; // New field for tracking advance payment usage
+  advanceUsed?: number;
+  cumulativeDue?: number; // Total due including previous invoices
 }
 
 // Payment Types
@@ -65,6 +68,7 @@ export interface Payment {
   reference: string;
   notes: string;
   type: 'regular' | 'advance';
+  invoiceId?: string; // Link payment to specific invoice
 }
 
 // Ledger Entry Types

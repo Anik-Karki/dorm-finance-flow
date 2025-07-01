@@ -30,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Search, Plus, Edit, Trash2, AlertTriangle, Users, DollarSign } from "lucide-react";
 import { formatCurrency } from '@/lib/utils';
 
 const Students = () => {
@@ -73,38 +73,79 @@ const Students = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="container mx-auto px-4 py-8 space-y-8 animate-fade-in">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+      <div className="container mx-auto px-6 py-8 space-y-8 animate-fade-in">
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Student Management
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Manage student information, fees, and services
+          <p className="text-muted-foreground text-xl max-w-2xl mx-auto">
+            Comprehensive student information system with advanced fee management and service tracking
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative flex-1 sm:flex-initial">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100">Total Students</p>
+                  <p className="text-3xl font-bold">{students.length}</p>
+                </div>
+                <Users className="h-12 w-12 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100">Active Students</p>
+                  <p className="text-3xl font-bold">{students.filter(s => s.status === 'active').length}</p>
+                </div>
+                <Users className="h-12 w-12 text-green-200" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100">Total Advance</p>
+                  <p className="text-3xl font-bold">
+                    {formatCurrency(students.reduce((sum, s) => sum + s.advanceBalance, 0))}
+                  </p>
+                </div>
+                <DollarSign className="h-12 w-12 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-4 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search students..."
-              className="pl-8 w-full border-2 border-gray-200 focus:border-blue-400"
+              placeholder="Search students by name, room, or phone..."
+              className="pl-12 h-14 border-2 border-gray-200 focus:border-blue-400 rounded-xl text-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Student
+              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-14 px-8 text-lg rounded-xl shadow-lg">
+                <Plus className="mr-3 h-6 w-6" />
+                Add New Student
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-blue-800">Add New Student</DialogTitle>
-                <DialogDescription className="text-blue-600">
-                  Enter the complete details of the new student including fee structure.
+                <DialogTitle className="text-3xl font-bold text-blue-800">Add New Student</DialogTitle>
+                <DialogDescription className="text-blue-600 text-lg">
+                  Enter complete student details including fee structure and required documents
                 </DialogDescription>
               </DialogHeader>
               <StudentForm 
@@ -116,58 +157,68 @@ const Students = () => {
         </div>
 
         {filteredStudents.length === 0 ? (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-10">
-              <p className="text-muted-foreground text-lg">No students match your search criteria.</p>
+          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+            <CardContent className="flex flex-col items-center justify-center py-20">
+              <Users className="h-20 w-20 text-gray-400 mb-6" />
+              <p className="text-muted-foreground text-xl">No students match your search criteria.</p>
             </CardContent>
           </Card>
         ) : (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-              <CardTitle className="text-xl">Student Directory</CardTitle>
-              <CardDescription className="text-blue-100">
-                Complete list of registered students with their fee structures
+          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl">
+              <CardTitle className="text-2xl font-bold">Student Directory</CardTitle>
+              <CardDescription className="text-blue-100 text-lg">
+                Complete registry with fee structures and advance balance tracking
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Room</TableHead>
-                    <TableHead className="font-semibold">Monthly Fee</TableHead>
-                    <TableHead className="font-semibold">Advance Balance</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="text-right font-semibold">Actions</TableHead>
+                  <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50 hover:from-gray-50 hover:to-blue-50">
+                    <TableHead className="font-bold text-gray-700 text-lg">Name</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Room</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Phone</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Monthly Fee</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Advance Balance</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Status</TableHead>
+                    <TableHead className="text-right font-bold text-gray-700 text-lg">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-blue-50/50 transition-colors">
-                      <TableCell className="font-medium text-gray-900">{student.name}</TableCell>
-                      <TableCell className="font-semibold text-blue-600">{student.room}</TableCell>
-                      <TableCell className="font-semibold text-green-600">{formatCurrency(student.feeAmount)}</TableCell>
-                      <TableCell className={`font-semibold ${student.advanceBalance > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                    <TableRow key={student.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b">
+                      <TableCell className="font-bold text-gray-900 text-lg py-4">{student.name}</TableCell>
+                      <TableCell className="font-bold text-blue-600 text-lg">{student.room}</TableCell>
+                      <TableCell className="font-medium text-gray-700">{student.phone}</TableCell>
+                      <TableCell className="font-bold text-green-600 text-lg">{formatCurrency(student.feeAmount)}</TableCell>
+                      <TableCell className={`font-bold text-lg ${student.advanceBalance > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                         {formatCurrency(student.advanceBalance)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className="font-medium">
+                        <Badge 
+                          variant={student.status === 'active' ? 'default' : 'secondary'} 
+                          className={`font-semibold px-3 py-1 text-sm ${
+                            student.status === 'active' 
+                              ? 'bg-green-100 text-green-800 border-green-200' 
+                              : 'bg-gray-100 text-gray-800 border-gray-200'
+                          }`}
+                        >
                           {student.status === 'active' ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button asChild size="sm" variant="ghost" className="hover:bg-blue-100">
+                        <Button asChild size="sm" variant="ghost" className="hover:bg-blue-100 h-10 w-10 p-0 rounded-lg">
                           <Link to={`/students/${student.id}`}>
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-5 w-5 text-blue-600" />
                           </Link>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          className="text-destructive hover:text-destructive hover:bg-red-100"
+                          className="text-destructive hover:text-destructive hover:bg-red-100 h-10 w-10 p-0 rounded-lg"
                           onClick={() => handleDeleteClick(student.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -180,19 +231,23 @@ const Students = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] rounded-xl">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
                 Confirm Deletion
               </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this student? This action cannot be undone.
+              <DialogDescription className="text-lg">
+                Are you sure you want to delete this student? This action cannot be undone and will permanently remove all student data.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+            <DialogFooter className="gap-3">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="px-6">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete} className="px-6">
+                Delete Student
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
