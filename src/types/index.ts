@@ -12,12 +12,22 @@ export interface Student {
   phone: string;
   guardianName: string;
   guardianPhone: string;
-  address: string;
+  address: string; // Keep for compatibility
+  permanentAddress?: string;
+  localGuardianName?: string;
+  localGuardianPhone?: string;
+  localGuardianAddress?: string;
   enrollmentDate: string;
   feeAmount: number;
   advanceBalance: number;
   status: 'active' | 'inactive';
   extraServices?: ExtraService[];
+  documents?: {
+    citizenship?: File | null;
+    photo?: File | null;
+    previousCertificate?: File | null;
+    medicalReport?: File | null;
+  };
 }
 
 // Invoice and Billing Types
