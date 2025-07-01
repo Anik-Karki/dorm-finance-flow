@@ -1,515 +1,653 @@
-
 import React, { useState } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, User, Home, Phone, Calendar, DollarSign, FileText, Users, Edit } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Student, ExtraService } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { Plus, Trash2, User, Home, Phone, DollarSign, FileText, Upload, X, Check } from 'lucide-react';
 
-interface ExtraService {
-  id: string;
-  name: string;
-  amount: number;
-}
+const studentSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  room: z.string().min(1, 'Room number is required'),
+  phone: z.string().min(10, 'Phone number must be valid'),
+  guardianName: z.string().min(2, 'Guardian name is required'),
+  guardianPhone: z.string().min(10, 'Guardian phone must be valid'),
+  permanentAddress: z.string().min(5, 'Permanent address is required'),
+  localGuardianName: z.string().optional(),
+  localGuardianPhone: z.string().optional(),
+  localGuardianAddress: z.string().optional(),
+  enrollmentDate: z.string().min(1, 'Enrollment date is required'),
+  feeAmount: z.number().min(0, 'Fee amount must be positive'),
+  advanceBalance: z.number().min(0, 'Advance balance must be non-negative'),
+  status: z.enum(['active', 'inactive']),
+});
+
+type StudentFormData = z.infer<typeof studentSchema>;
 
 interface StudentFormProps {
-  onSubmit: (studentData: any) => void;
+  student?: Student;
+  onSubmit: (data: Omit<Student, 'id'>) => void;
   onCancel: () => void;
 }
 
-const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel }) => {
-  const [studentData, setStudentData] = useState({
-    name: '',
-    room: '',
-    phone: '',
-    guardianName: '',
-    guardianPhone: '',
-    permanentAddress: '',
-    localGuardianName: '',
-    localGuardianPhone: '',
-    localGuardianAddress: '',
-    enrollmentDate: new Date().toISOString().split('T')[0],
-    baseFee: 0,
-    extraServices: [] as ExtraService[],
-    advanceBalance: 0,
-    status: 'active' as const,
-    documents: {
-      idDocument: null as File | null,
-      photo: null as File | null,
-      educationCertificate: null as File | null,
-      medicalReport: null as File | null,
-      otherDocument: null as File | null
+const predefinedExpenses = [
+  { name: 'Laundry Service', amount: 500 },
+  { name: 'Cleaning Service', amount: 300 },
+  { name: 'Wi-Fi Access', amount: 200 },
+  { name: 'Study Materials', amount: 400 },
+  { name: 'Recreation Activities', amount: 350 },
+  { name: 'Medical Insurance', amount: 600 },
+  { name: 'Transportation', amount: 450 },
+  { name: 'Food Package Upgrade', amount: 800 },
+];
+
+const documentTypes = [
+  { key: 'idDocument', label: 'ID Document', description: 'Citizenship, Passport, or any valid ID', icon: FileText },
+  { key: 'photo', label: 'Student Photo', description: 'Recent passport-size photograph', icon: User },
+  { key: 'educationCertificate', label: 'Education Certificate', description: 'School leaving certificate or transcript', icon: FileText },
+  { key: 'medicalReport', label: 'Medical Report', description: 'Health checkup report (optional)', icon: FileText },
+  { key: 'otherDocument', label: 'Other Document', description: 'Any additional relevant document', icon: FileText }
+];
+
+const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }) => {
+  const [extraServices, setExtraServices] = useState<ExtraService[]>(student?.extraServices || []);
+  const [customExpense, setCustomExpense] = useState({ name: '', amount: 0 });
+  const [documents, setDocuments] = useState<{ [key: string]: File | null }>(
+    student?.documents || {}
+  );
+
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
+      name: student?.name || '',
+      room: student?.room || '',
+      phone: student?.phone || '',
+      guardianName: student?.guardianName || '',
+      guardianPhone: student?.guardianPhone || '',
+      permanentAddress: student?.permanentAddress || student?.address || '',
+      localGuardianName: student?.localGuardianName || '',
+      localGuardianPhone: student?.localGuardianPhone || '',
+      localGuardianAddress: student?.localGuardianAddress || '',
+      enrollmentDate: student?.enrollmentDate || new Date().toISOString().split('T')[0],
+      feeAmount: student?.feeAmount || 0,
+      advanceBalance: student?.advanceBalance || 0,
+      status: student?.status || 'active',
+    },
+  });
+
+  const addPredefinedExpense = (expense: { name: string; amount: number }) => {
+    const exists = extraServices.find(service => service.name === expense.name);
+    if (exists) {
+      toast.error('This service is already added');
+      return;
     }
-  });
-
-  const [newService, setNewService] = useState({
-    name: '',
-    amount: 0
-  });
-
-  const [editingService, setEditingService] = useState<string | null>(null);
-
-  // Enhanced predefined expenses with editable amounts
-  const predefinedExpenses = [
-    { name: 'Laundry Service', amount: 800 },
-    { name: 'Mess/Food Service', amount: 4500 },
-    { name: 'Internet/WiFi', amount: 1200 },
-    { name: 'Cleaning Service', amount: 600 },
-    { name: 'Security Deposit', amount: 3000 },
-    { name: 'Electricity Bill', amount: 1500 },
-    { name: 'Water Bill', amount: 500 },
-    { name: 'Parking Fee', amount: 800 },
-    { name: 'Study Room Access', amount: 1000 },
-    { name: 'Gym/Recreation', amount: 1200 },
-    { name: 'Maintenance Fee', amount: 700 },
-    { name: 'Library Access', amount: 500 }
-  ];
-
-  const addPredefinedService = (expense: { name: string; amount: number }) => {
-    const service: ExtraService = {
-      id: Date.now().toString(),
+    
+    const newService: ExtraService = {
+      id: Date.now().toString(36),
       name: expense.name,
-      amount: expense.amount
+      amount: expense.amount,
     };
-    
-    setStudentData(prev => ({
-      ...prev,
-      extraServices: [...prev.extraServices, service]
-    }));
+    setExtraServices([...extraServices, newService]);
+    toast.success(`${expense.name} added successfully`);
   };
 
-  const addExtraService = () => {
-    if (!newService.name.trim() || newService.amount <= 0) return;
-    
-    const service: ExtraService = {
-      id: Date.now().toString(),
-      name: newService.name,
-      amount: newService.amount
-    };
-    
-    setStudentData(prev => ({
-      ...prev,
-      extraServices: [...prev.extraServices, service]
-    }));
-    
-    setNewService({ name: '', amount: 0 });
-  };
+  const addCustomExpense = () => {
+    if (!customExpense.name.trim()) {
+      toast.error('Please enter expense name');
+      return;
+    }
+    if (customExpense.amount <= 0) {
+      toast.error('Please enter valid amount');
+      return;
+    }
 
-  const updateServiceAmount = (id: string, newAmount: number) => {
-    setStudentData(prev => ({
-      ...prev,
-      extraServices: prev.extraServices.map(service => 
-        service.id === id ? { ...service, amount: newAmount } : service
-      )
-    }));
-    setEditingService(null);
+    const exists = extraServices.find(service => service.name === customExpense.name);
+    if (exists) {
+      toast.error('This service already exists');
+      return;
+    }
+
+    const newService: ExtraService = {
+      id: Date.now().toString(36),
+      name: customExpense.name,
+      amount: customExpense.amount,
+    };
+    setExtraServices([...extraServices, newService]);
+    setCustomExpense({ name: '', amount: 0 });
+    toast.success('Custom expense added successfully');
   };
 
   const removeExtraService = (id: string) => {
-    setStudentData(prev => ({
-      ...prev,
-      extraServices: prev.extraServices.filter(service => service.id !== id)
-    }));
+    setExtraServices(extraServices.filter(service => service.id !== id));
+    toast.success('Service removed successfully');
   };
 
-  const handleDocumentUpload = (docType: keyof typeof studentData.documents, file: File | null) => {
-    setStudentData(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [docType]: file
-      }
-    }));
+  const updateServiceAmount = (id: string, newAmount: number) => {
+    setExtraServices(extraServices.map(service => 
+      service.id === id ? { ...service, amount: newAmount } : service
+    ));
   };
 
-  const totalMonthlyFee = studentData.baseFee + studentData.extraServices.reduce((sum, service) => sum + service.amount, 0);
+  const handleFileUpload = (documentType: string, file: File | null) => {
+    setDocuments(prev => ({
+      ...prev,
+      [documentType]: file
+    }));
+    
+    if (file) {
+      toast.success(`${documentTypes.find(dt => dt.key === documentType)?.label} uploaded successfully`);
+    }
+  };
 
-  const handleSubmit = () => {
-    const finalStudentData = {
-      ...studentData,
-      feeAmount: totalMonthlyFee,
-      address: studentData.permanentAddress
+  const removeDocument = (documentType: string) => {
+    setDocuments(prev => ({
+      ...prev,
+      [documentType]: null
+    }));
+    toast.success('Document removed successfully');
+  };
+
+  const calculateTotalFee = () => {
+    const baseFee = form.watch('feeAmount') || 0;
+    const extraTotal = extraServices.reduce((sum, service) => sum + service.amount, 0);
+    return baseFee + extraTotal;
+  };
+
+  const handleFormSubmit = (data: StudentFormData) => {
+    const totalFeeAmount = calculateTotalFee();
+    
+    const studentData: Omit<Student, 'id'> = {
+      name: data.name,
+      room: data.room,
+      phone: data.phone,
+      guardianName: data.guardianName,
+      guardianPhone: data.guardianPhone,
+      address: data.permanentAddress, // Keep for compatibility
+      permanentAddress: data.permanentAddress,
+      localGuardianName: data.localGuardianName,
+      localGuardianPhone: data.localGuardianPhone,
+      localGuardianAddress: data.localGuardianAddress,
+      enrollmentDate: data.enrollmentDate,
+      feeAmount: totalFeeAmount,
+      advanceBalance: data.advanceBalance,
+      status: data.status,
+      extraServices,
+      documents,
     };
-    onSubmit(finalStudentData);
+
+    onSubmit(studentData);
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 p-6">
-      {/* Basic Information */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-            <User className="h-6 w-6" />
-            Student Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Full Name</Label>
-              <Input
-                id="name"
-                value={studentData.name}
-                onChange={(e) => setStudentData({...studentData, name: e.target.value})}
-                placeholder="Enter full name"
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="room" className="text-sm font-semibold text-gray-700">Room Number</Label>
-              <Input
-                id="room"
-                value={studentData.room}
-                onChange={(e) => setStudentData({...studentData, room: e.target.value})}
-                placeholder="e.g., A-101"
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">Phone Number</Label>
-              <Input
-                id="phone"
-                value={studentData.phone}
-                onChange={(e) => setStudentData({...studentData, phone: e.target.value})}
-                placeholder="e.g., 9876543210"
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="enrollmentDate" className="text-sm font-semibold text-gray-700">Enrollment Date</Label>
-              <Input
-                id="enrollmentDate"
-                type="date"
-                value={studentData.enrollmentDate}
-                onChange={(e) => setStudentData({...studentData, enrollmentDate: e.target.value})}
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <Label htmlFor="permanentAddress" className="text-sm font-semibold text-gray-700">Permanent Address</Label>
-            <Textarea
-              id="permanentAddress"
-              value={studentData.permanentAddress}
-              onChange={(e) => setStudentData({...studentData, permanentAddress: e.target.value})}
-              placeholder="Enter complete permanent address"
-              className="border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              rows={3}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="guardianName" className="text-sm font-semibold text-gray-700">Guardian's Name</Label>
-              <Input
-                id="guardianName"
-                value={studentData.guardianName}
-                onChange={(e) => setStudentData({...studentData, guardianName: e.target.value})}
-                placeholder="Guardian's full name"
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="guardianPhone" className="text-sm font-semibold text-gray-700">Guardian's Phone</Label>
-              <Input
-                id="guardianPhone"
-                value={studentData.guardianPhone}
-                onChange={(e) => setStudentData({...studentData, guardianPhone: e.target.value})}
-                placeholder="e.g., 9876543210"
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-lg"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Local Guardian Information */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-pink-50">
-        <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-            <Users className="h-6 w-6" />
-            Local Guardian Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="localGuardianName" className="text-sm font-semibold text-gray-700">Local Guardian's Name</Label>
-              <Input
-                id="localGuardianName"
-                value={studentData.localGuardianName}
-                onChange={(e) => setStudentData({...studentData, localGuardianName: e.target.value})}
-                placeholder="Local guardian's full name"
-                className="h-12 border-2 border-gray-200 focus:border-purple-500 rounded-xl text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="localGuardianPhone" className="text-sm font-semibold text-gray-700">Local Guardian's Phone</Label>
-              <Input
-                id="localGuardianPhone"
-                value={studentData.localGuardianPhone}
-                onChange={(e) => setStudentData({...studentData, localGuardianPhone: e.target.value})}
-                placeholder="e.g., 9876543210"
-                className="h-12 border-2 border-gray-200 focus:border-purple-500 rounded-xl text-lg"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <Label htmlFor="localGuardianAddress" className="text-sm font-semibold text-gray-700">Local Guardian's Address</Label>
-            <Textarea
-              id="localGuardianAddress"
-              value={studentData.localGuardianAddress}
-              onChange={(e) => setStudentData({...studentData, localGuardianAddress: e.target.value})}
-              placeholder="Enter local guardian's complete address"
-              className="border-2 border-gray-200 focus:border-purple-500 rounded-xl text-lg"
-              rows={2}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Enhanced Documents Section */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-orange-50 to-yellow-50">
-        <CardHeader className="bg-gradient-to-r from-orange-600 to-yellow-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-            <FileText className="h-6 w-6" />
-            Document Upload (Safety & Verification)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="idDocument" className="text-sm font-semibold text-gray-700">ID Document (Citizenship/Passport/Any Valid ID)</Label>
-              <Input
-                id="idDocument"
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(e) => handleDocumentUpload('idDocument', e.target.files?.[0] || null)}
-                className="h-12 border-2 border-gray-200 focus:border-orange-500 rounded-xl"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="photo" className="text-sm font-semibold text-gray-700">Passport Size Photo</Label>
-              <Input
-                id="photo"
-                type="file"
-                accept=".jpg,.jpeg,.png"
-                onChange={(e) => handleDocumentUpload('photo', e.target.files?.[0] || null)}
-                className="h-12 border-2 border-gray-200 focus:border-orange-500 rounded-xl"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="educationCertificate" className="text-sm font-semibold text-gray-700">Education Certificate</Label>
-              <Input
-                id="educationCertificate"
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(e) => handleDocumentUpload('educationCertificate', e.target.files?.[0] || null)}
-                className="h-12 border-2 border-gray-200 focus:border-orange-500 rounded-xl"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="medicalReport" className="text-sm font-semibold text-gray-700">Medical Report (Optional)</Label>
-              <Input
-                id="medicalReport"
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(e) => handleDocumentUpload('medicalReport', e.target.files?.[0] || null)}
-                className="h-12 border-2 border-gray-200 focus:border-orange-500 rounded-xl"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <Label htmlFor="otherDocument" className="text-sm font-semibold text-gray-700">Other Document (Optional)</Label>
-            <Input
-              id="otherDocument"
-              type="file"
-              accept=".jpg,.jpeg,.png,.pdf"
-              onChange={(e) => handleDocumentUpload('otherDocument', e.target.files?.[0] || null)}
-              className="h-12 border-2 border-gray-200 focus:border-orange-500 rounded-xl"
-            />
-          </div>
-          
-          <div className="text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-            <p><strong>Note:</strong> Documents are stored securely for safety and verification. Any valid ID document is acceptable for underage students. Accepted formats: JPG, JPEG, PNG, PDF (Max 5MB each)</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Enhanced Fee Structure */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
-        <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-            <DollarSign className="h-6 w-6" />
-            Fee Structure & Services
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label htmlFor="baseFee" className="text-sm font-semibold text-gray-700">Base Monthly Fee</Label>
-              <Input
-                id="baseFee"
-                type="number"
-                value={studentData.baseFee || ''}
-                onChange={(e) => setStudentData({...studentData, baseFee: Number(e.target.value)})}
-                placeholder="e.g., 8000"
-                className="h-12 border-2 border-gray-200 focus:border-green-500 rounded-xl text-lg"
-              />
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="advanceBalance" className="text-sm font-semibold text-gray-700">Initial Advance Balance</Label>
-              <Input
-                id="advanceBalance"
-                type="number"
-                value={studentData.advanceBalance || ''}
-                onChange={(e) => setStudentData({...studentData, advanceBalance: Number(e.target.value)})}
-                placeholder="e.g., 0"
-                className="h-12 border-2 border-gray-200 focus:border-green-500 rounded-xl text-lg"
-              />
-            </div>
-          </div>
-
-          {/* Quick Add Predefined Expenses */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-green-800">Quick Add Common Services</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {predefinedExpenses.map((expense) => (
-                <Button
-                  key={expense.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addPredefinedService(expense)}
-                  className="text-xs p-3 h-auto flex-col border-2 border-green-200 hover:bg-green-100 hover:border-green-400 rounded-xl transition-all duration-200"
-                  disabled={studentData.extraServices.some(service => service.name === expense.name)}
-                >
-                  <span className="font-semibold text-center">{expense.name}</span>
-                  <span className="text-green-600 font-bold">Rs. {expense.amount}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Extra Services */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-green-800">Add Custom Service</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="serviceName" className="text-sm font-semibold text-gray-700">Service Name</Label>
-                <Input
-                  id="serviceName"
-                  value={newService.name}
-                  onChange={(e) => setNewService({...newService, name: e.target.value})}
-                  placeholder="e.g., Custom Service"
-                  className="h-12 border-2 border-gray-200 focus:border-green-500 rounded-xl text-lg"
+    <div className="space-y-8 max-w-6xl mx-auto">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          {/* Personal Information Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <User className="h-6 w-6" />
+                Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Full Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-blue-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="room"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Room Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-blue-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Phone Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-blue-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="enrollmentDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Enrollment Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          className="h-12 text-lg border-2 border-gray-200 focus:border-blue-400 rounded-xl" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div>
-                <Label htmlFor="serviceAmount" className="text-sm font-semibold text-gray-700">Monthly Amount</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="serviceAmount"
-                    type="number"
-                    value={newService.amount || ''}
-                    onChange={(e) => setNewService({...newService, amount: Number(e.target.value)})}
-                    placeholder="Amount"
-                    className="h-12 border-2 border-gray-200 focus:border-green-500 rounded-xl text-lg"
-                  />
-                  <Button onClick={addExtraService} className="h-12 px-4 bg-green-600 hover:bg-green-700 rounded-xl">
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {studentData.extraServices.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-bold text-green-700 text-lg">Added Services:</h4>
-                <div className="space-y-3">
-                  {studentData.extraServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-green-200 shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary" className="text-green-700 px-3 py-1 text-sm font-semibold">
-                          {service.name}
-                        </Badge>
-                        {editingService === service.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              defaultValue={service.amount}
-                              className="w-24 h-8"
-                              onBlur={(e) => updateServiceAmount(service.id, Number(e.target.value))}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  updateServiceAmount(service.id, Number((e.target as HTMLInputElement).value));
-                                }
-                              }}
-                              autoFocus
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-green-800 text-lg">
-                              {formatCurrency(service.amount)}
-                            </span>
+          {/* Address Information Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Home className="h-6 w-6" />
+                Address Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <FormField
+                control={form.control}
+                name="permanentAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-lg font-semibold text-gray-700">Permanent Address</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        className="min-h-24 text-lg border-2 border-gray-200 focus:border-green-400 rounded-xl resize-none" 
+                        placeholder="Enter complete permanent address..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Guardian Information Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-violet-50">
+            <CardHeader className="bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Phone className="h-6 w-6" />
+                Guardian Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="guardianName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Primary Guardian Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-purple-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="guardianPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Primary Guardian Phone</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-purple-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="localGuardianName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Local Guardian Name (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-purple-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="localGuardianPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Local Guardian Phone (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="h-12 text-lg border-2 border-gray-200 focus:border-purple-400 rounded-xl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="localGuardianAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-lg font-semibold text-gray-700">Local Guardian Address (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        className="min-h-20 text-lg border-2 border-gray-200 focus:border-purple-400 rounded-xl resize-none" 
+                        placeholder="Enter local guardian address if applicable..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Document Upload Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-orange-50 to-amber-50">
+            <CardHeader className="bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Upload className="h-6 w-6" />
+                Document Upload
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documentTypes.map((docType) => {
+                  const IconComponent = docType.icon;
+                  const uploadedFile = documents[docType.key];
+                  
+                  return (
+                    <div key={docType.key} className="space-y-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <IconComponent className="h-5 w-5 text-orange-600" />
+                        <Label className="font-semibold text-gray-700">{docType.label}</Label>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">{docType.description}</p>
+                      
+                      {uploadedFile ? (
+                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Check className="h-5 w-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-800 truncate max-w-32">
+                                {uploadedFile.name}
+                              </span>
+                            </div>
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
-                              onClick={() => setEditingService(service.id)}
-                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                              onClick={() => removeDocument(docType.key)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Edit className="h-3 w-3" />
+                              <X className="h-4 w-4" />
                             </Button>
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-orange-400 transition-colors">
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              handleFileUpload(docType.key, file);
+                            }}
+                            className="hidden"
+                            id={`file-${docType.key}`}
+                          />
+                          <Label
+                            htmlFor={`file-${docType.key}`}
+                            className="flex flex-col items-center justify-center cursor-pointer text-center space-y-2 py-4"
+                          >
+                            <Upload className="h-8 w-8 text-gray-400" />
+                            <span className="text-sm text-gray-600">Click to upload</span>
+                            <span className="text-xs text-gray-500">PDF, JPG, PNG, DOC</span>
+                          </Label>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Fee Management Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50 to-teal-50">
+            <CardHeader className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <DollarSign className="h-6 w-6" />
+                Fee Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="feeAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Base Monthly Fee</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-12 text-lg border-2 border-gray-200 focus:border-emerald-400 rounded-xl" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="advanceBalance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Advance Payment</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field} 
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-12 text-lg border-2 border-gray-200 focus:border-emerald-400 rounded-xl" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg font-semibold text-gray-700">Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-12 text-lg border-2 border-gray-200 focus:border-emerald-400 rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-6 rounded-xl border border-emerald-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-xl font-bold text-emerald-800">Total Monthly Fee:</span>
+                  <span className="text-2xl font-bold text-emerald-600">
+                    NPR {calculateTotalFee().toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Extra Services Card */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-50 to-purple-50">
+            <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Plus className="h-6 w-6" />
+                Extra Services & Expenses
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              {/* Predefined Expenses */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700">Quick Add Services</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {predefinedExpenses.map((expense, index) => (
+                    <div key={index} className="bg-white p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 transition-colors">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-800">{expense.name}</span>
+                        <Badge variant="secondary">NPR {expense.amount}</Badge>
                       </div>
                       <Button
+                        type="button"
                         size="sm"
-                        variant="ghost"
-                        onClick={() => removeExtraService(service.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                        onClick={() => addPredefinedExpense(expense)}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Service
                       </Button>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
 
-            <div className="bg-gradient-to-r from-blue-100 to-indigo-100 p-6 rounded-xl border-2 border-blue-300">
-              <div className="flex justify-between items-center">
-                <span className="text-xl font-bold text-blue-800">Total Monthly Fee:</span>
-                <span className="text-3xl font-bold text-blue-900">{formatCurrency(totalMonthlyFee)}</span>
+              {/* Custom Expense */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700">Add Custom Service</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input
+                    placeholder="Service name"
+                    value={customExpense.name}
+                    onChange={(e) => setCustomExpense({ ...customExpense, name: e.target.value })}
+                    className="h-12 text-lg border-2 border-gray-200 focus:border-indigo-400 rounded-xl"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={customExpense.amount || ''}
+                    onChange={(e) => setCustomExpense({ ...customExpense, amount: Number(e.target.value) })}
+                    className="h-12 text-lg border-2 border-gray-200 focus:border-indigo-400 rounded-xl"
+                  />
+                  <Button
+                    type="button"
+                    onClick={addCustomExpense}
+                    className="h-12 bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Add Custom
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-4 pt-4">
-        <Button variant="outline" onClick={onCancel} className="px-8 py-3 text-lg rounded-xl">
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} className="px-8 py-3 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl">
-          Add Student
-        </Button>
-      </div>
+              {/* Added Services List */}
+              {extraServices.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700">Selected Services</h3>
+                  <div className="grid gap-4">
+                    {extraServices.map((service) => (
+                      <div key={service.id} className="bg-white p-4 rounded-xl border-2 border-indigo-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-800">{service.name}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Amount:</Label>
+                              <Input
+                                type="number"
+                                value={service.amount}
+                                onChange={(e) => updateServiceAmount(service.id, Number(e.target.value))}
+                                className="w-24 h-8 text-sm"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeExtraService(service.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Form Actions */}
+          <div className="flex justify-end gap-4 p-6 bg-gray-50 rounded-xl">
+            <Button type="button" variant="outline" onClick={onCancel} className="px-8 py-3 text-lg">
+              Cancel
+            </Button>
+            <Button type="submit" className="px-8 py-3 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              {student ? 'Update Student' : 'Add Student'}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };

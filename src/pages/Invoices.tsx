@@ -33,7 +33,10 @@ import {
   FileText,
   ArrowUpDown,
   Filter,
-  DollarSign
+  DollarSign,
+  TrendingUp,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 import { formatCurrency } from '@/lib/utils';
 
@@ -41,41 +44,37 @@ const Invoices = () => {
   const { invoices, students } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>('issueDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
-  // Calculate cumulative dues for each student
-  const calculateCumulativeDues = () => {
-    const studentDues: { [key: string]: number } = {};
+  // Calculate enhanced invoice data with cumulative dues
+  const enhancedInvoices = invoices.map(invoice => {
+    const student = students.find(s => s.id === invoice.studentId);
+    const studentInvoices = invoices
+      .filter(inv => inv.studentId === invoice.studentId)
+      .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
     
-    students.forEach(student => {
-      const studentInvoices = invoices
-        .filter(inv => inv.studentId === student.id)
-        .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
-      
-      let cumulativeDue = 0;
-      studentInvoices.forEach(invoice => {
-        cumulativeDue += invoice.balanceAmount;
-        studentDues[invoice.id] = cumulativeDue;
-      });
-    });
+    // Calculate cumulative due up to this invoice
+    let cumulativeDue = 0;
+    for (const inv of studentInvoices) {
+      cumulativeDue += inv.balanceAmount;
+      if (inv.id === invoice.id) break;
+    }
     
-    return studentDues;
-  };
-
-  const cumulativeDues = calculateCumulativeDues();
-  
-  // Enhanced invoices with cumulative due information
-  const enhancedInvoices = invoices.map(invoice => ({
-    ...invoice,
-    cumulativeDue: cumulativeDues[invoice.id] || invoice.balanceAmount
-  }));
+    return {
+      ...invoice,
+      cumulativeDue,
+      isLatest: studentInvoices[studentInvoices.length - 1]?.id === invoice.id,
+      studentRoom: student?.room || 'N/A'
+    };
+  });
   
   // Filter invoices based on search term and status
   const filteredInvoices = enhancedInvoices.filter(invoice => {
     const matchesSearch = invoice.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          invoice.id.includes(searchTerm) ||
-                         invoice.monthYear.includes(searchTerm);
+                         invoice.monthYear.includes(searchTerm) ||
+                         invoice.studentRoom.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'paid' && invoice.status === 'paid') ||
@@ -87,8 +86,6 @@ const Invoices = () => {
   
   // Sort invoices
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-    if (!sortField) return 0;
-    
     if (sortField === 'issueDate') {
       return sortDirection === 'asc' 
         ? new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime()
@@ -132,47 +129,128 @@ const Invoices = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, isLatest: boolean) => {
+    const baseClasses = "font-semibold px-3 py-1 text-sm border-2";
+    
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Paid</Badge>;
+        return (
+          <Badge className={`${baseClasses} bg-green-100 text-green-800 border-green-300`}>
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Paid
+          </Badge>
+        );
       case 'partially_paid':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Partially Paid</Badge>;
+        return (
+          <Badge className={`${baseClasses} bg-yellow-100 text-yellow-800 border-yellow-300`}>
+            <Clock className="h-4 w-4 mr-1" />
+            Partial
+          </Badge>
+        );
       case 'unpaid':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Due</Badge>;
+        return (
+          <Badge className={`${baseClasses} ${isLatest ? 'bg-red-100 text-red-800 border-red-300' : 'bg-orange-100 text-orange-800 border-orange-300'}`}>
+            <TrendingUp className="h-4 w-4 mr-1" />
+            {isLatest ? 'Due' : 'Unpaid'}
+          </Badge>
+        );
       case 'overdue':
-        return <Badge className="bg-red-200 text-red-900 border-red-300">Overdue</Badge>;
+        return (
+          <Badge className={`${baseClasses} bg-red-200 text-red-900 border-red-400 animate-pulse`}>
+            <TrendingUp className="h-4 w-4 mr-1" />
+            Overdue
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
+  // Calculate summary stats
+  const totalInvoices = filteredInvoices.length;
+  const paidInvoices = filteredInvoices.filter(inv => inv.status === 'paid').length;
+  const totalDue = filteredInvoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
+  const totalCumulativeDue = filteredInvoices
+    .filter(inv => inv.isLatest && inv.cumulativeDue > 0)
+    .reduce((sum, inv) => sum + inv.cumulativeDue, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto px-6 py-8 space-y-8 animate-fade-in">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Invoice Management
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Track payments, dues, and invoice statuses with smart analytics
+          <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
+            Advanced invoice tracking with smart cumulative due calculations and payment analytics
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        {/* Enhanced Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100">Total Invoices</p>
+                  <p className="text-3xl font-bold">{totalInvoices}</p>
+                </div>
+                <FileText className="h-12 w-12 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100">Paid Invoices</p>
+                  <p className="text-3xl font-bold">{paidInvoices}</p>
+                </div>
+                <CheckCircle className="h-12 w-12 text-green-200" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-red-500 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100">Current Due</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalDue)}</p>
+                </div>
+                <Clock className="h-12 w-12 text-orange-200" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100">Total Outstanding</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalCumulativeDue)}</p>
+                </div>
+                <TrendingUp className="h-12 w-12 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-4 top-4 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search invoices..."
-                className="pl-10 h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl"
+                placeholder="Search by student, room, invoice ID..."
+                className="pl-12 h-14 border-2 border-gray-200 focus:border-blue-400 rounded-xl text-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl">
-                <Filter className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-56 h-14 border-2 border-gray-200 focus:border-blue-400 rounded-xl text-lg">
+                <Filter className="h-5 w-5 mr-2" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -183,89 +261,98 @@ const Invoices = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 px-6 rounded-xl">
+          <Button asChild className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-14 px-8 text-lg rounded-xl shadow-lg">
             <Link to="/invoices/new">
-              <Plus className="mr-2 h-5 w-5" />
+              <Plus className="mr-3 h-6 w-6" />
               New Invoice
             </Link>
           </Button>
         </div>
 
         {filteredInvoices.length === 0 ? (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <DollarSign className="h-16 w-16 text-gray-400 mb-4" />
-              <p className="text-muted-foreground text-lg">No invoices match your search criteria.</p>
+          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+            <CardContent className="flex flex-col items-center justify-center py-20">
+              <DollarSign className="h-20 w-20 text-gray-400 mb-6" />
+              <p className="text-muted-foreground text-xl">No invoices match your search criteria.</p>
             </CardContent>
           </Card>
         ) : (
-          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+          <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
             <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl">
-              <CardTitle className="text-2xl">Invoice Overview</CardTitle>
-              <CardDescription className="text-blue-100">
-                Complete invoice tracking with cumulative due calculations
+              <CardTitle className="text-2xl font-bold">Invoice Registry</CardTitle>
+              <CardDescription className="text-blue-100 text-lg">
+                Comprehensive invoice tracking with advanced due management and payment history
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableHead className="font-bold text-gray-700">Invoice #</TableHead>
-                    <TableHead className="font-bold text-gray-700">Student</TableHead>
-                    <TableHead className="font-bold text-gray-700">Month</TableHead>
-                    <TableHead onClick={() => handleSort('issueDate')} className="cursor-pointer font-bold text-gray-700">
+                  <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50 hover:from-gray-50 hover:to-blue-50">
+                    <TableHead className="font-bold text-gray-700 text-lg">Invoice #</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Student (Room)</TableHead>
+                    <TableHead className="font-bold text-gray-700 text-lg">Month/Year</TableHead>
+                    <TableHead onClick={() => handleSort('issueDate')} className="cursor-pointer font-bold text-gray-700 text-lg">
                       <div className="flex items-center hover:text-blue-600">
                         Issue Date
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                        <ArrowUpDown className="ml-2 h-5 w-5" />
                       </div>
                     </TableHead>
-                    <TableHead onClick={() => handleSort('totalAmount')} className="cursor-pointer font-bold text-gray-700">
+                    <TableHead onClick={() => handleSort('totalAmount')} className="cursor-pointer font-bold text-gray-700 text-lg">
                       <div className="flex items-center hover:text-blue-600">
                         Total Amount
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                        <ArrowUpDown className="ml-2 h-5 w-5" />
                       </div>
                     </TableHead>
-                    <TableHead className="font-bold text-gray-700">Partial Paid</TableHead>
-                    <TableHead onClick={() => handleSort('cumulativeDue')} className="cursor-pointer font-bold text-gray-700">
+                    <TableHead className="font-bold text-gray-700 text-lg">Partial Paid</TableHead>
+                    <TableHead onClick={() => handleSort('cumulativeDue')} className="cursor-pointer font-bold text-gray-700 text-lg">
                       <div className="flex items-center hover:text-blue-600">
                         Total Due
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                        <ArrowUpDown className="ml-2 h-5 w-5" />
                       </div>
                     </TableHead>
-                    <TableHead onClick={() => handleSort('status')} className="cursor-pointer font-bold text-gray-700">
+                    <TableHead onClick={() => handleSort('status')} className="cursor-pointer font-bold text-gray-700 text-lg">
                       <div className="flex items-center hover:text-blue-600">
                         Status
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                        <ArrowUpDown className="ml-2 h-5 w-5" />
                       </div>
                     </TableHead>
-                    <TableHead className="text-right font-bold text-gray-700">Actions</TableHead>
+                    <TableHead className="text-right font-bold text-gray-700 text-lg">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedInvoices.map((invoice) => (
-                    <TableRow key={invoice.id} className="hover:bg-blue-50/50 transition-colors border-b">
-                      <TableCell className="font-mono text-sm font-medium">{invoice.id}</TableCell>
-                      <TableCell>
-                        <Link to={`/students/${invoice.studentId}`} className="text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                    <TableRow 
+                      key={invoice.id} 
+                      className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b ${
+                        invoice.isLatest && invoice.cumulativeDue > 0 ? 'bg-red-50/50' : ''
+                      }`}
+                    >
+                      <TableCell className="font-mono text-sm font-bold text-gray-700 py-4">
+                        {invoice.id}
+                        {invoice.isLatest && <Badge className="ml-2 text-xs bg-blue-100 text-blue-800">LATEST</Badge>}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <Link to={`/students/${invoice.studentId}`} className="text-blue-600 hover:text-blue-800 font-bold hover:underline text-lg">
                           {invoice.studentName}
                         </Link>
+                        <p className="text-sm text-gray-600 font-medium">Room {invoice.studentRoom}</p>
                       </TableCell>
-                      <TableCell className="font-medium">{invoice.monthYear}</TableCell>
-                      <TableCell className="text-gray-600">{new Date(invoice.issueDate).toLocaleDateString('en-IN')}</TableCell>
-                      <TableCell className="font-bold text-lg">{formatCurrency(invoice.totalAmount)}</TableCell>
-                      <TableCell className="font-bold text-green-600">
+                      <TableCell className="font-bold text-lg text-gray-700">{invoice.monthYear}</TableCell>
+                      <TableCell className="text-gray-600 font-medium">{new Date(invoice.issueDate).toLocaleDateString('en-IN')}</TableCell>
+                      <TableCell className="font-bold text-lg text-blue-600">{formatCurrency(invoice.totalAmount)}</TableCell>
+                      <TableCell className="font-bold text-green-600 text-lg">
                         {invoice.paidAmount > 0 ? formatCurrency(invoice.paidAmount) : '-'}
                       </TableCell>
                       <TableCell className={`font-bold text-lg ${invoice.cumulativeDue > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                         {invoice.cumulativeDue > 0 ? formatCurrency(invoice.cumulativeDue) : '-'}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(invoice.status)}
+                        {getStatusBadge(invoice.status, invoice.isLatest)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild size="sm" variant="outline" className="hover:bg-blue-50 border-blue-200">
+                        <Button asChild size="sm" variant="outline" className="hover:bg-blue-50 border-blue-200 font-medium">
                           <Link to={`/invoices/${invoice.id}`}>
-                            <FileText className="h-4 w-4 mr-2" />
+                            <FileText className="h-5 w-5 mr-2" />
                             View
                           </Link>
                         </Button>

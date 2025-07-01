@@ -57,32 +57,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
-  // Calculate cumulative dues for invoices
+  // Calculate cumulative dues for each student
   const updateCumulativeDues = () => {
-    const studentGroups = students.reduce((acc, student) => {
-      acc[student.id] = invoices
+    const updatedInvoices = [...invoices];
+    
+    students.forEach(student => {
+      const studentInvoices = updatedInvoices
         .filter(inv => inv.studentId === student.id)
         .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
-      return acc;
-    }, {} as { [key: string]: Invoice[] });
-
-    setInvoices(prev => {
-      const updated = [...prev];
-      Object.values(studentGroups).forEach(studentInvoices => {
-        let cumulativeDue = 0;
-        studentInvoices.forEach(invoice => {
-          cumulativeDue += invoice.balanceAmount;
-          const index = updated.findIndex(inv => inv.id === invoice.id);
-          if (index !== -1) {
-            updated[index] = { ...updated[index], cumulativeDue };
-          }
-        });
+      
+      let runningDue = 0;
+      studentInvoices.forEach(invoice => {
+        runningDue += invoice.balanceAmount;
+        const index = updatedInvoices.findIndex(inv => inv.id === invoice.id);
+        if (index !== -1) {
+          updatedInvoices[index] = { ...updatedInvoices[index], cumulativeDue: runningDue };
+        }
       });
-      return updated;
     });
+
+    setInvoices(updatedInvoices);
   };
 
-  // Auto-generate monthly invoices
+  // Auto-generate monthly invoices with cumulative due tracking
   const generateMonthlyInvoices = () => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1;
@@ -97,6 +94,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
 
         if (!existingInvoice) {
+          // Get previous unpaid balance for cumulative due calculation
+          const previousInvoices = invoices
+            .filter(inv => inv.studentId === student.id && inv.balanceAmount > 0)
+            .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
+          
+          const previousDue = previousInvoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
+
           // Create new invoice
           const newInvoice: Invoice = {
             id: generateId(),
@@ -110,16 +114,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             totalAmount: student.feeAmount,
             status: 'unpaid',
             paidAmount: 0,
-            balanceAmount: student.feeAmount
+            balanceAmount: student.feeAmount,
+            cumulativeDue: previousDue + student.feeAmount
           };
 
           // Apply advance payment if available
           if (student.advanceBalance > 0) {
-            const advanceToUse = Math.min(student.advanceBalance, student.feeAmount);
+            const totalDue = newInvoice.totalAmount;
+            const advanceToUse = Math.min(student.advanceBalance, totalDue);
             newInvoice.paidAmount = advanceToUse;
-            newInvoice.balanceAmount = student.feeAmount - advanceToUse;
+            newInvoice.balanceAmount = totalDue - advanceToUse;
             newInvoice.status = newInvoice.balanceAmount <= 0 ? 'paid' : 'partially_paid';
             newInvoice.advanceUsed = advanceToUse;
+            newInvoice.cumulativeDue = (previousDue + totalDue) - advanceToUse;
 
             // Update student advance balance
             setStudents(prev => prev.map(s => 
@@ -191,9 +198,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return students.find(s => s.id === id);
   };
 
-  // Enhanced Invoice Functions with better cumulative due tracking
+  // Enhanced Invoice Functions with smart cumulative due tracking
   const addInvoice = (invoice: Omit<Invoice, 'id'>) => {
-    const newInvoice = { ...invoice, id: generateId() };
+    // Calculate cumulative due including previous unpaid invoices
+    const previousInvoices = invoices
+      .filter(inv => inv.studentId === invoice.studentId && inv.balanceAmount > 0)
+      .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
+    
+    const previousDue = previousInvoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
+    
+    const newInvoice = { 
+      ...invoice, 
+      id: generateId(),
+      cumulativeDue: previousDue + invoice.balanceAmount
+    };
+    
     setInvoices(prev => [...prev, newInvoice]);
     
     // Add a ledger entry for the invoice
@@ -236,56 +255,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getInvoicesByStudentId = (studentId: string) => {
-    return invoices.filter(inv => inv.studentId === studentId);
+    return invoices
+      .filter(inv => inv.studentId === studentId)
+      .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
   };
 
   const getInvoiceById = (id: string) => {
     return invoices.find(inv => inv.id === id);
   };
 
-  // Extra Expenses Functions
-  const addExtraExpense = (studentId: string, invoiceId: string, expense: Omit<ExtraExpense, 'id'>) => {
-    const newExpense = { ...expense, id: generateId() };
-    
-    setInvoices(prev => prev.map(inv => {
-      if (inv.id === invoiceId) {
-        const updatedExtraExpenses = [...inv.extraExpenses, newExpense];
-        const newTotalAmount = inv.baseFee + updatedExtraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-        
-        return {
-          ...inv,
-          extraExpenses: updatedExtraExpenses,
-          totalAmount: newTotalAmount,
-          balanceAmount: inv.status === 'paid' ? 0 : newTotalAmount - inv.paidAmount
-        };
-      }
-      return inv;
-    }));
-    
-    // Add a ledger entry for the extra expense
-    const student = getStudentById(studentId);
-    if (student) {
-      addLedgerEntry({
-        date: new Date().toISOString(),
-        studentId,
-        studentName: student.name,
-        type: 'expense',
-        description: expense.description,
-        amount: expense.amount,
-        balance: expense.amount
-      });
-    }
-    
-    toast.success('Extra expense added with automatic recalculation.');
-  };
-
-  // Enhanced Payment Functions with better invoice targeting
+  // Enhanced Payment Functions with smart invoice targeting
   const addPayment = (payment: Omit<Payment, 'id'>) => {
     const newPayment = { ...payment, id: generateId() };
     setPayments(prev => [...prev, newPayment]);
     
     if (payment.type === 'regular') {
-      // For regular payments, target specific invoice if provided, otherwise distribute
+      // For regular payments, target invoices with highest cumulative due first
       let remainingPayment = payment.amount;
       
       if (payment.invoiceId) {
@@ -310,9 +295,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return inv;
         }));
       } else {
-        // Distribute across unpaid invoices (oldest first)
+        // Distribute across unpaid invoices (prioritize latest with highest cumulative due)
+        const unpaidInvoices = invoices
+          .filter(inv => inv.studentId === payment.studentId && inv.balanceAmount > 0)
+          .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
+
         setInvoices(prev => prev.map(inv => {
-          if (inv.studentId === payment.studentId && inv.balanceAmount > 0 && remainingPayment > 0) {
+          const isTargetInvoice = unpaidInvoices.find(ui => ui.id === inv.id);
+          if (isTargetInvoice && remainingPayment > 0) {
             const paymentToApply = Math.min(remainingPayment, inv.balanceAmount);
             remainingPayment -= paymentToApply;
             
@@ -356,6 +346,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     
     toast.success(`${payment.type === 'advance' ? 'Advance p' : 'P'}ayment of ${formatCurrency(payment.amount)} processed successfully for ${payment.studentName}.`);
+    
+    // Recalculate cumulative dues after payment
+    setTimeout(() => updateCumulativeDues(), 100);
   };
 
   const updatePayment = (payment: Payment) => {
@@ -381,6 +374,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getLedgerEntriesByStudentId = (studentId: string) => {
     return ledgerEntries.filter(entry => entry.studentId === studentId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const addExtraExpense = (studentId: string, invoiceId: string, expense: Omit<ExtraExpense, 'id'>) => {
+    const newExpense = { ...expense, id: generateId() };
+    
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id === invoiceId) {
+        const updatedExtraExpenses = [...inv.extraExpenses, newExpense];
+        const newTotalAmount = inv.baseFee + updatedExtraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        
+        return {
+          ...inv,
+          extraExpenses: updatedExtraExpenses,
+          totalAmount: newTotalAmount,
+          balanceAmount: inv.status === 'paid' ? 0 : newTotalAmount - inv.paidAmount
+        };
+      }
+      return inv;
+    }));
+    
+    // Add a ledger entry for the extra expense
+    const student = getStudentById(studentId);
+    if (student) {
+      addLedgerEntry({
+        date: new Date().toISOString(),
+        studentId,
+        studentName: student.name,
+        type: 'expense',
+        description: expense.description,
+        amount: expense.amount,
+        balance: expense.amount
+      });
+    }
+    
+    toast.success('Extra expense added with automatic recalculation.');
   };
 
   const value = {
