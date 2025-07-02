@@ -53,38 +53,30 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile = false, onClose }) 
             ? "fixed inset-y-0 left-0 w-64 z-50 shadow-xl" 
             : "fixed -left-64 w-64 z-50"
         ) : (
-          isOpen ? "w-64" : "w-16"
+          "w-64" // Always keep full width to show both icon and text
         )
       )}>
         <div className="flex flex-col h-full">
           {/* Logo/Brand */}
           <div className={cn(
             "flex items-center py-4 border-b border-white/10",
-            isOpen ? "px-4 sm:px-6 justify-between" : "justify-center"
+            isOpen ? "px-4 sm:px-6 justify-between" : "px-4 justify-between"
           )}>
-            {isOpen ? (
-              <>
-                <h1 className="font-bold text-lg sm:text-xl">HostelFin</h1>
-                {isMobile && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onClose}
-                    className="text-sidebar-foreground hover:bg-white/10"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <h1 className="font-bold text-xl cursor-default">HF</h1>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>HostelFin - Hostel Management System</p>
-                </TooltipContent>
-              </Tooltip>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="font-bold text-primary-foreground text-sm">HF</span>
+              </div>
+              <h1 className="font-bold text-lg sm:text-xl">HostelFin</h1>
+            </div>
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="text-sidebar-foreground hover:bg-white/10"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             )}
           </div>
 
@@ -93,37 +85,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile = false, onClose }) 
             <ul className="space-y-1 px-2">
               {menuItems.map((item) => (
                 <li key={item.to}>
-                  {!isOpen && !isMobile ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <NavLink
-                          to={item.to}
-                          onClick={handleNavClick}
-                          className={({ isActive }) => cn(
-                            "flex items-center py-3 px-3 rounded-lg hover:bg-primary/10 transition-colors text-sm font-medium justify-center",
-                            isActive ? "bg-primary/20 text-primary-foreground border-l-4 border-primary" : ""
-                          )}
-                        >
-                          <item.icon className="h-5 w-5 flex-shrink-0" />
-                        </NavLink>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>{item.label}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <NavLink
-                      to={item.to}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => cn(
-                        "flex items-center py-3 px-3 rounded-lg hover:bg-primary/10 transition-colors text-sm font-medium",
-                        isActive ? "bg-primary/20 text-primary-foreground border-l-4 border-primary" : ""
-                      )}
-                    >
+                  <NavLink
+                    to={item.to}
+                    onClick={handleNavClick}
+                    className={({ isActive }) => cn(
+                      "flex items-center py-3 px-4 rounded-lg hover:bg-primary/10 transition-colors text-sm font-medium group",
+                      isActive ? "bg-primary/20 text-primary-foreground border-l-4 border-primary" : ""
+                    )}
+                  >
+                    <div className="flex items-center space-x-3 w-full">
                       <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="ml-3 truncate">{item.label}</span>
-                    </NavLink>
-                  )}
+                      <span className="truncate font-medium">{item.label}</span>
+                    </div>
+                  </NavLink>
                 </li>
               ))}
             </ul>
@@ -133,27 +107,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile = false, onClose }) 
           <div className={cn(
             "py-4 border-t border-white/10 px-2",
           )}>
-            {!isOpen && !isMobile ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className={cn(
-                    "flex items-center py-3 px-3 w-full hover:bg-primary/10 transition-colors rounded-lg text-sm font-medium justify-center"
-                  )}>
-                    <LogOut className="h-5 w-5 flex-shrink-0" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Logout</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <button className={cn(
-                "flex items-center py-3 px-3 w-full hover:bg-primary/10 transition-colors rounded-lg text-sm font-medium"
-              )}>
+            <button className={cn(
+              "flex items-center py-3 px-4 w-full hover:bg-primary/10 transition-colors rounded-lg text-sm font-medium group"
+            )}>
+              <div className="flex items-center space-x-3 w-full">
                 <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className="ml-3">Logout</span>
-              </button>
-            )}
+                <span className="font-medium">Logout</span>
+              </div>
+            </button>
           </div>
         </div>
       </aside>
