@@ -200,7 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Enhanced Invoice Functions with smart cumulative due tracking
   const addInvoice = (invoice: Omit<Invoice, 'id'>) => {
-    // Calculate cumulative due including previous unpaid invoices
+    // Calculate cumulative due including ALL previous unpaid invoices for this student
     const previousInvoices = invoices
       .filter(inv => inv.studentId === invoice.studentId && inv.balanceAmount > 0)
       .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
@@ -210,7 +210,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newInvoice = { 
       ...invoice, 
       id: generateId(),
-      cumulativeDue: previousDue + invoice.balanceAmount
+      cumulativeDue: previousDue + invoice.balanceAmount,
+      // Latest invoice always shows total outstanding including all previous dues
+      totalDue: previousDue + invoice.balanceAmount
     };
     
     setInvoices(prev => [...prev, newInvoice]);

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PageHeader from "./PageHeader";
 
 interface TopBarProps {
   children?: React.ReactNode;
@@ -25,6 +26,7 @@ const TopBar: React.FC<TopBarProps> = ({ children }) => {
     <header className="border-b border-border bg-background h-14 sm:h-16 flex items-center px-2 sm:px-4 justify-between">
       <div className="flex items-center flex-1">
         {children}
+        <PageHeader />
         {!isMobile && (
           <div className="relative ml-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

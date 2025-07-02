@@ -343,8 +343,8 @@ const Invoices = () => {
                       <TableCell className="font-bold text-green-600 text-lg">
                         {invoice.paidAmount > 0 ? formatCurrency(invoice.paidAmount) : '-'}
                       </TableCell>
-                      <TableCell className={`font-bold text-lg ${invoice.cumulativeDue > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                        {invoice.cumulativeDue > 0 ? formatCurrency(invoice.cumulativeDue) : '-'}
+                      <TableCell className={`font-bold text-lg ${(invoice.totalDue || invoice.cumulativeDue) > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                        {(invoice.totalDue || invoice.cumulativeDue) > 0 ? formatCurrency(invoice.totalDue || invoice.cumulativeDue) : '-'}
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(invoice.status, invoice.isLatest)}

@@ -55,6 +55,7 @@ export interface Invoice {
   balanceAmount: number;
   advanceUsed?: number;
   cumulativeDue?: number; // Total due including previous invoices
+  totalDue?: number; // Latest invoice total payable amount
 }
 
 // Payment Types
