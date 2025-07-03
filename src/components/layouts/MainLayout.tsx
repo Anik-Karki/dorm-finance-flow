@@ -51,7 +51,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <Menu className="h-5 w-5" />
           </Button>
         </TopBar>
-        <main className="flex-1 overflow-auto p-2 sm:p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
           {children}
         </main>
       </div>

@@ -85,30 +85,31 @@ const InvoiceDetail = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.id}</h1>
-          <p className="text-muted-foreground">Month: {invoice.monthYear}</p>
-          <p className="text-sm text-blue-600 font-medium">Nepali Month: {formatNepaliMonthYear(invoice.issueDate)}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Invoice #{invoice.id}</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Month: {invoice.monthYear}</p>
+          <p className="text-xs sm:text-sm text-blue-600 font-medium">Nepali Month: {formatNepaliMonthYear(invoice.issueDate)}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={printInvoice}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={printInvoice} className="w-full sm:w-auto">
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Download
           </Button>
           {invoice.status !== 'paid' && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Extra Expense
+                  <span className="hidden sm:inline">Add Extra Expense</span>
+                  <span className="sm:hidden">Add Expense</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="w-[95vw] max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Add Extra Expense</DialogTitle>
                   <DialogDescription>
@@ -175,21 +176,21 @@ const InvoiceDetail = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div>
                   <h3 className="font-medium mb-2">Billed To:</h3>
                   <p className="font-medium">{invoice.studentName}</p>
                   {student && (
                     <>
                       <p>Room: {student.room}</p>
-                      <p>{student.phone}</p>
-                      <p>{student.address}</p>
+                      <p className="break-all">{student.phone}</p>
+                      <p className="text-sm">{student.address}</p>
                     </>
                   )}
                 </div>
-                <div className="text-right">
-                  <div className="space-y-1">
-                    <div className="flex justify-end">
+                <div className="lg:text-right">
+                  <div className="space-y-2 lg:space-y-1">
+                    <div className="flex justify-between lg:justify-end">
                       <span className="font-medium w-32">Status:</span>
                       <Badge 
                         variant={
@@ -203,29 +204,30 @@ const InvoiceDetail = () => {
                          invoice.status === 'overdue' ? 'Overdue' : 'Unpaid'}
                       </Badge>
                     </div>
-                    <div className="flex justify-end">
-                      <span className="font-medium w-32">Invoice Date:</span>
-                      <span>{new Date(invoice.issueDate).toLocaleDateString('en-IN')}</span>
+                    <div className="flex justify-between lg:justify-end">
+                      <span className="font-medium w-32 text-sm lg:text-base">Invoice Date:</span>
+                      <span className="text-sm lg:text-base">{new Date(invoice.issueDate).toLocaleDateString('en-IN')}</span>
                     </div>
-                    <div className="flex justify-end">
-                      <span className="font-medium w-32">Due Date:</span>
-                      <span>{new Date(invoice.dueDate).toLocaleDateString('en-IN')}</span>
+                    <div className="flex justify-between lg:justify-end">
+                      <span className="font-medium w-32 text-sm lg:text-base">Due Date:</span>
+                      <span className="text-sm lg:text-base">{new Date(invoice.dueDate).toLocaleDateString('en-IN')}</span>
                     </div>
-                    <div className="flex justify-end">
-                      <span className="font-medium w-32">Amount Due:</span>
-                      <span>{formatCurrency(invoice.balanceAmount)}</span>
+                    <div className="flex justify-between lg:justify-end">
+                      <span className="font-medium w-32 text-sm lg:text-base">Amount Due:</span>
+                      <span className="text-sm lg:text-base">{formatCurrency(invoice.balanceAmount)}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60%]">Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60%]">Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium">
@@ -249,7 +251,8 @@ const InvoiceDetail = () => {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
 
               <div className="mt-8 space-y-2">
                 <div className="flex justify-end">
