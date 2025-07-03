@@ -37,7 +37,7 @@ import {
   Plus,
   Printer
 } from "lucide-react";
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNepaliMonthYear } from '@/lib/utils';
 
 const InvoiceDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -89,6 +89,7 @@ const InvoiceDetail = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoice #{invoice.id}</h1>
           <p className="text-muted-foreground">Month: {invoice.monthYear}</p>
+          <p className="text-sm text-blue-600 font-medium">Nepali Month: {formatNepaliMonthYear(invoice.issueDate)}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={printInvoice}>
@@ -162,6 +163,9 @@ const InvoiceDetail = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   Invoice #{invoice.id} for {invoice.monthYear}
                 </p>
+                <p className="text-xs text-blue-600 font-medium">
+                  Nepali Month: {formatNepaliMonthYear(invoice.issueDate)}
+                </p>
               </div>
               <div className="text-right">
                 <h3 className="font-bold text-xl">HostelFin</h3>
@@ -226,6 +230,9 @@ const InvoiceDetail = () => {
                   <TableRow>
                     <TableCell className="font-medium">
                       Monthly Hostel Fee for {invoice.monthYear}
+                      <span className="text-sm text-blue-600 block">
+                        ({formatNepaliMonthYear(invoice.issueDate)})
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(invoice.baseFee)}</TableCell>
                   </TableRow>

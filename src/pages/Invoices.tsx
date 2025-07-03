@@ -38,7 +38,7 @@ import {
   Clock,
   CheckCircle
 } from "lucide-react";
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNepaliMonthYear } from '@/lib/utils';
 
 const Invoices = () => {
   const { invoices, students } = useAppContext();
@@ -337,7 +337,12 @@ const Invoices = () => {
                         </Link>
                         <p className="text-sm text-gray-600 font-medium">Room {invoice.studentRoom}</p>
                       </TableCell>
-                      <TableCell className="font-bold text-lg text-gray-700">{invoice.monthYear}</TableCell>
+                      <TableCell className="py-4">
+                        <div className="font-bold text-lg text-gray-700">{invoice.monthYear}</div>
+                        <div className="text-sm text-blue-600 font-medium">
+                          {formatNepaliMonthYear(invoice.issueDate)}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-gray-600 font-medium">{new Date(invoice.issueDate).toLocaleDateString('en-IN')}</TableCell>
                       <TableCell className="font-bold text-lg text-blue-600">{formatCurrency(invoice.totalAmount)}</TableCell>
                       <TableCell className="font-bold text-green-600 text-lg">
