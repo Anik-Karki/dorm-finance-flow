@@ -150,6 +150,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
 
           if (newInvoice.advanceUsed && newInvoice.advanceUsed > 0) {
+            // Create payment record for advance usage
+            const advancePayment: Payment = {
+              id: generateId(),
+              studentId: student.id,
+              studentName: student.name,
+              amount: newInvoice.advanceUsed,
+              date: newInvoice.issueDate,
+              paymentMode: 'cash', // Default mode for advance payments
+              reference: `Advance Applied - Invoice ${newInvoice.id}`,
+              notes: `Advance payment automatically applied to ${monthYearString} invoice`,
+              type: 'regular',
+              invoiceId: newInvoice.id
+            };
+            setPayments(prev => [...prev, advancePayment]);
+
             addLedgerEntry({
               date: newInvoice.issueDate,
               studentId: student.id,
@@ -228,9 +243,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       balance: newInvoice.totalAmount
     });
     
-    // If advance payment was used, add a payment ledger entry
+    // If advance payment was used, add a payment record and ledger entry
     const advanceUsed = (newInvoice as any).advanceUsed || 0;
     if (advanceUsed > 0) {
+      // Create payment record for advance usage
+      const advancePayment: Payment = {
+        id: generateId(),
+        studentId: newInvoice.studentId,
+        studentName: newInvoice.studentName,
+        amount: advanceUsed,
+        date: newInvoice.issueDate,
+        paymentMode: 'cash', // Default mode for advance payments
+        reference: `Advance Applied - Invoice ${newInvoice.id}`,
+        notes: `Advance payment automatically applied to ${newInvoice.monthYear} invoice`,
+        type: 'regular',
+        invoiceId: newInvoice.id
+      };
+      setPayments(prev => [...prev, advancePayment]);
+
       addLedgerEntry({
         date: newInvoice.issueDate,
         studentId: newInvoice.studentId,

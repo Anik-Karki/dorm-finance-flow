@@ -525,14 +525,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
                 />
               </div>
               
-              <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-6 rounded-xl border border-emerald-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-emerald-800">Total Monthly Fee:</span>
-                  <span className="text-2xl font-bold text-emerald-600">
-                    NPR {calculateTotalFee().toLocaleString()}
-                  </span>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -634,6 +626,24 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Total Fee Summary */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50 to-teal-50">
+            <CardContent className="p-6">
+              <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-6 rounded-xl border border-emerald-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-xl font-bold text-emerald-800">Total Monthly Fee:</span>
+                  <span className="text-2xl font-bold text-emerald-600">
+                    NPR {calculateTotalFee().toLocaleString()}
+                  </span>
+                </div>
+                <div className="mt-2 text-sm text-emerald-700">
+                  Base Fee: NPR {(form.watch('feeAmount') || 0).toLocaleString()} + 
+                  Extra Services: NPR {extraServices.reduce((sum, service) => sum + service.amount, 0).toLocaleString()}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
