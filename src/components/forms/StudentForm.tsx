@@ -103,6 +103,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
   );
   const [searchPhone, setSearchPhone] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<typeof mockKahaAppData>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
@@ -201,6 +203,36 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
     return baseFee + extraTotal;
   };
 
+  const handleSearchChange = (phoneNumber: string) => {
+    setSearchPhone(phoneNumber);
+    
+    if (phoneNumber.trim().length >= 3) {
+      // Filter students based on partial phone number match
+      const filteredResults = mockKahaAppData.filter(student => 
+        student.phone.includes(phoneNumber.trim())
+      );
+      setSearchResults(filteredResults);
+      setShowDropdown(filteredResults.length > 0);
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
+  };
+
+  const selectStudent = (selectedStudent: typeof mockKahaAppData[0]) => {
+    // Auto-populate form fields
+    form.setValue('name', selectedStudent.name);
+    form.setValue('phone', selectedStudent.phone);
+    form.setValue('guardianName', selectedStudent.guardianName);
+    form.setValue('guardianPhone', selectedStudent.guardianPhone);
+    form.setValue('permanentAddress', selectedStudent.permanentAddress);
+    
+    toast.success(`Student selected: ${selectedStudent.name}`);
+    setSearchPhone('');
+    setSearchResults([]);
+    setShowDropdown(false);
+  };
+
   const searchKahaAppStudent = async (phoneNumber: string) => {
     if (!phoneNumber.trim()) {
       toast.error('Please enter a phone number');
@@ -273,19 +305,52 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
             <p className="text-gray-600 text-lg">
               Search for existing students in your Kaha App database by phone number to auto-populate their information.
             </p>
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="flex gap-4 relative">
+              <div className="flex-1 relative">
                 <Input
-                  placeholder="Enter phone number (e.g., 9841234567)"
+                  placeholder="Start typing phone number (e.g., 984...)"
                   value={searchPhone}
-                  onChange={(e) => setSearchPhone(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="h-12 text-lg border-2 border-gray-200 focus:border-cyan-400 rounded-xl"
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && searchPhone.trim()) {
                       searchKahaAppStudent(searchPhone);
                     }
                   }}
+                  onBlur={() => {
+                    // Delay hiding dropdown to allow selection
+                    setTimeout(() => setShowDropdown(false), 200);
+                  }}
+                  onFocus={() => {
+                    if (searchResults.length > 0) {
+                      setShowDropdown(true);
+                    }
+                  }}
                 />
+                
+                {/* Dropdown Results */}
+                {showDropdown && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-cyan-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {searchResults.map((student, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectStudent(student)}
+                        className="p-4 hover:bg-cyan-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-gray-800">{student.name}</div>
+                            <div className="text-sm text-gray-600">{student.phone}</div>
+                            <div className="text-xs text-gray-500 mt-1">{student.permanentAddress}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-cyan-600">Select</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button
                 type="button"
