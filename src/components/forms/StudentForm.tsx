@@ -92,6 +92,41 @@ const mockKahaAppData = [
     guardianName: 'Maya Rai',
     guardianPhone: '9861234566',
     permanentAddress: 'Dharan, Nepal'
+  },
+  {
+    phone: '9841567890',
+    name: 'Gita Poudel',
+    guardianName: 'Raj Poudel',
+    guardianPhone: '9841567891',
+    permanentAddress: 'Chitwan, Nepal'
+  },
+  {
+    phone: '9851987654',
+    name: 'Ramesh Gurung',
+    guardianName: 'Dil Gurung',
+    guardianPhone: '9851987655',
+    permanentAddress: 'Butwal, Nepal'
+  },
+  {
+    phone: '9861456789',
+    name: 'Sunita Magar',
+    guardianName: 'Bir Magar',
+    guardianPhone: '9861456788',
+    permanentAddress: 'Jhapa, Nepal'
+  },
+  {
+    phone: '9841789012',
+    name: 'Prakash Tamang',
+    guardianName: 'Lal Tamang',
+    guardianPhone: '9841789013',
+    permanentAddress: 'Lalitpur, Nepal'
+  },
+  {
+    phone: '9851369741',
+    name: 'Anita Shrestha',
+    guardianName: 'Gopal Shrestha',
+    guardianPhone: '9851369742',
+    permanentAddress: 'Bhaktapur, Nepal'
   }
 ];
 
