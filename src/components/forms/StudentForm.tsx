@@ -25,7 +25,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Trash2, User, Home, Phone, DollarSign, FileText, Upload, X, Check } from 'lucide-react';
+import { Plus, Trash2, User, Home, Phone, DollarSign, FileText, Upload, X, Check, Search } from 'lucide-react';
 
 const studentSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -70,12 +70,39 @@ const documentTypes = [
   { key: 'otherDocument', label: 'Other Document', description: 'Any additional relevant document', icon: FileText }
 ];
 
+// Mock data from "kaha app" - replace with actual API call
+const mockKahaAppData = [
+  {
+    phone: '9841234567',
+    name: 'Ram Sharma',
+    guardianName: 'Krishna Sharma',
+    guardianPhone: '9841234566',
+    permanentAddress: 'Kathmandu, Nepal'
+  },
+  {
+    phone: '9851234567',
+    name: 'Shyam Thapa',
+    guardianName: 'Hari Thapa',
+    guardianPhone: '9851234566',
+    permanentAddress: 'Pokhara, Nepal'
+  },
+  {
+    phone: '9861234567',
+    name: 'Sita Rai',
+    guardianName: 'Maya Rai',
+    guardianPhone: '9861234566',
+    permanentAddress: 'Dharan, Nepal'
+  }
+];
+
 const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }) => {
   const [extraServices, setExtraServices] = useState<ExtraService[]>(student?.extraServices || []);
   const [customExpense, setCustomExpense] = useState({ name: '', amount: 0 });
   const [documents, setDocuments] = useState<{ [key: string]: File | null }>(
     student?.documents || {}
   );
+  const [searchPhone, setSearchPhone] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
@@ -174,6 +201,38 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
     return baseFee + extraTotal;
   };
 
+  const searchKahaAppStudent = async (phoneNumber: string) => {
+    if (!phoneNumber.trim()) {
+      toast.error('Please enter a phone number');
+      return;
+    }
+
+    setIsSearching(true);
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      const foundStudent = mockKahaAppData.find(student => 
+        student.phone === phoneNumber.trim()
+      );
+      
+      if (foundStudent) {
+        // Auto-populate form fields
+        form.setValue('name', foundStudent.name);
+        form.setValue('phone', foundStudent.phone);
+        form.setValue('guardianName', foundStudent.guardianName);
+        form.setValue('guardianPhone', foundStudent.guardianPhone);
+        form.setValue('permanentAddress', foundStudent.permanentAddress);
+        
+        toast.success(`Student found: ${foundStudent.name}`);
+        setSearchPhone('');
+      } else {
+        toast.error('Student not found in Kaha App database');
+      }
+      
+      setIsSearching(false);
+    }, 1000);
+  };
+
   const handleFormSubmit = (data: StudentFormData) => {
     const totalFeeAmount = calculateTotalFee();
     
@@ -201,6 +260,61 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
+      {/* Kaha App Search Card */}
+      <Card className="border-0 shadow-xl bg-gradient-to-br from-cyan-50 to-blue-50">
+        <CardHeader className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-t-lg">
+          <CardTitle className="text-2xl flex items-center gap-3">
+            <Search className="h-6 w-6" />
+            Search from Kaha App
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-8">
+          <div className="space-y-4">
+            <p className="text-gray-600 text-lg">
+              Search for existing students in your Kaha App database by phone number to auto-populate their information.
+            </p>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Enter phone number (e.g., 9841234567)"
+                  value={searchPhone}
+                  onChange={(e) => setSearchPhone(e.target.value)}
+                  className="h-12 text-lg border-2 border-gray-200 focus:border-cyan-400 rounded-xl"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      searchKahaAppStudent(searchPhone);
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={() => searchKahaAppStudent(searchPhone)}
+                disabled={isSearching}
+                className="h-12 px-8 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
+              >
+                {isSearching ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Searching...
+                  </div>
+                ) : (
+                  <>
+                    <Search className="h-5 w-5 mr-2" />
+                    Search
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+              <p className="text-sm text-cyan-800">
+                <strong>Test Phone Numbers:</strong> 9841234567 (Ram Sharma), 9851234567 (Shyam Thapa), 9861234567 (Sita Rai)
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
           {/* Personal Information Card */}
