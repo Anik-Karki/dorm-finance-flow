@@ -319,7 +319,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
                   }}
                   onBlur={() => {
                     // Delay hiding dropdown to allow selection
-                    setTimeout(() => setShowDropdown(false), 200);
+                    setTimeout(() => setShowDropdown(false), 300);
                   }}
                   onFocus={() => {
                     if (searchResults.length > 0) {
@@ -334,7 +334,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSubmit, onCancel }
                     {searchResults.map((student, index) => (
                       <div
                         key={index}
-                        onClick={() => selectStudent(student)}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent blur from firing
+                          selectStudent(student);
+                        }}
                         className="p-4 hover:bg-cyan-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                       >
                         <div className="flex justify-between items-center">
