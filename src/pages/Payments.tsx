@@ -68,6 +68,12 @@ const Payments = () => {
         ? a.amount - b.amount
         : b.amount - a.amount;
     }
+
+    if (sortField === 'studentName') {
+      return sortDirection === 'asc' 
+        ? a.studentName.localeCompare(b.studentName)
+        : b.studentName.localeCompare(a.studentName);
+    }
     
     return 0;
   });
@@ -149,7 +155,12 @@ const Payments = () => {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="font-semibold">Receipt ID</TableHead>
-                    <TableHead className="font-semibold">Student</TableHead>
+                    <TableHead onClick={() => handleSort('studentName')} className="cursor-pointer font-semibold">
+                      <div className="flex items-center">
+                        Student
+                        <ArrowDownUp className="ml-2 h-4 w-4" />
+                      </div>
+                    </TableHead>
                     <TableHead onClick={() => handleSort('date')} className="cursor-pointer font-semibold">
                       <div className="flex items-center">
                         Date

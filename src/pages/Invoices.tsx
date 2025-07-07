@@ -78,8 +78,9 @@ const Invoices = () => {
     
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'paid' && invoice.status === 'paid') ||
-                         (statusFilter === 'partially_paid' && invoice.status === 'partially_paid') ||
-                         (statusFilter === 'due' && (invoice.status === 'unpaid' || invoice.status === 'overdue'));
+                         (statusFilter === 'unpaid' && invoice.status === 'unpaid') ||
+                         (statusFilter === 'overdue' && invoice.status === 'overdue') ||
+                         (statusFilter === 'partially_paid' && invoice.status === 'partially_paid');
     
     return matchesSearch && matchesStatus;
   });
@@ -115,6 +116,12 @@ const Invoices = () => {
       return sortDirection === 'asc' 
         ? statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder]
         : statusOrder[b.status as keyof typeof statusOrder] - statusOrder[a.status as keyof typeof statusOrder];
+    }
+
+    if (sortField === 'studentName') {
+      return sortDirection === 'asc' 
+        ? a.studentName.localeCompare(b.studentName)
+        : b.studentName.localeCompare(a.studentName);
     }
     
     return 0;
@@ -253,11 +260,12 @@ const Invoices = () => {
                 <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border-2 z-50">
                 <SelectItem value="all">All Invoices</SelectItem>
-                <SelectItem value="paid">Paid Only</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="partially_paid">Partially Paid</SelectItem>
-                <SelectItem value="due">Due Amount</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -289,7 +297,12 @@ const Invoices = () => {
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50 hover:from-gray-50 hover:to-blue-50">
                     <TableHead className="font-bold text-gray-700 text-sm sm:text-base lg:text-lg whitespace-nowrap">Invoice #</TableHead>
-                    <TableHead className="font-bold text-gray-700 text-sm sm:text-base lg:text-lg whitespace-nowrap">Student (Room)</TableHead>
+                    <TableHead onClick={() => handleSort('studentName')} className="cursor-pointer font-bold text-gray-700 text-sm sm:text-base lg:text-lg whitespace-nowrap">
+                      <div className="flex items-center hover:text-blue-600">
+                        Student (Room)
+                        <ArrowUpDown className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      </div>
+                    </TableHead>
                     <TableHead className="font-bold text-gray-700 text-sm sm:text-base lg:text-lg whitespace-nowrap hidden md:table-cell">Month/Year</TableHead>
                     <TableHead onClick={() => handleSort('issueDate')} className="cursor-pointer font-bold text-gray-700 text-sm sm:text-base lg:text-lg whitespace-nowrap hidden lg:table-cell">
                       <div className="flex items-center hover:text-blue-600">
