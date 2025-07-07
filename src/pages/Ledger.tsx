@@ -54,27 +54,34 @@ const Ledger = () => {
         studentId: invoice.studentId,
         studentName: invoice.studentName,
         type: 'invoice' as const,
-        description: `Invoice #${invoice.id.slice(-8)} - ${invoice.monthYear}`,
+        description: `Invoice #${invoice.id.slice(-8)} - ${invoice.monthYear} (${invoice.status === 'overdue' ? 'OVERDUE' : invoice.status.toUpperCase()})`,
         debitAmount: invoice.totalAmount,
         creditAmount: 0,
         reference: invoice.id,
-        status: invoice.status
+        status: invoice.status,
+        monthYear: invoice.monthYear,
+        cumulativeDue: invoice.cumulativeDue || 0
       });
     });
 
     // Add payment entries (Credit - Cash/Bank)
     payments.forEach(payment => {
+      const invoice = invoices.find(inv => inv.id === payment.invoiceId);
+      const monthPaid = invoice ? invoice.monthYear : 'General';
+      
       allEntries.push({
         id: `pay-${payment.id}`,
         date: payment.date,
         studentId: payment.studentId,
         studentName: payment.studentName,
         type: payment.type === 'advance' ? 'advance_payment' as const : 'payment' as const,
-        description: `${payment.type === 'advance' ? 'Advance ' : ''}Payment - ${payment.paymentMode}${payment.reference ? ` (${payment.reference})` : ''}`,
+        description: `${payment.type === 'advance' ? 'Advance ' : ''}Payment for ${monthPaid} - ${payment.paymentMode}${payment.reference ? ` (${payment.reference})` : ''}`,
         debitAmount: 0,
         creditAmount: payment.amount,
         reference: payment.id,
-        paymentMode: payment.paymentMode
+        paymentMode: payment.paymentMode,
+        monthYear: monthPaid,
+        invoiceId: payment.invoiceId
       });
     });
 
@@ -89,7 +96,7 @@ const Ledger = () => {
         studentBalances[entry.studentId] = 0;
       }
       
-      // Update running balance
+      // Update running balance (Debit increases balance, Credit decreases)
       studentBalances[entry.studentId] += entry.debitAmount - entry.creditAmount;
       
       return {
@@ -144,9 +151,10 @@ const Ledger = () => {
     setFilterDateRange({ from: '', to: '' });
   };
   
+  
   const exportLedger = () => {
-    // Create CSV content
-    const headers = ['Date', 'Student', 'Description', 'Type', 'Debit', 'Credit', 'Balance'];
+    // Create CSV content with enhanced data
+    const headers = ['Date', 'Student', 'Description', 'Type', 'Month/Year', 'Debit', 'Credit', 'Balance'];
     const csvContent = [
       headers.join(','),
       ...filteredEntries.map(entry => [
@@ -154,6 +162,7 @@ const Ledger = () => {
         `"${entry.studentName}"`,
         `"${entry.description}"`,
         entry.type,
+        entry.monthYear || 'N/A',
         entry.debitAmount || 0,
         entry.creditAmount || 0,
         entry.runningBalance
@@ -167,6 +176,77 @@ const Ledger = () => {
     a.download = `ledger-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const printLedger = () => {
+    // Create printable content
+    const printContent = `
+      <html>
+        <head>
+          <title>Financial Ledger - ${new Date().toLocaleDateString('en-IN')}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #2563eb; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .debit { color: #dc2626; }
+            .credit { color: #16a34a; }
+            .summary { margin-top: 20px; padding: 15px; background-color: #f8f9fa; }
+          </style>
+        </head>
+        <body>
+          <h1>Financial Ledger Statement</h1>
+          <p class="text-center">Generated on: ${new Date().toLocaleDateString('en-IN')} at ${new Date().toLocaleTimeString('en-IN')}</p>
+          
+          <div class="summary">
+            <h3>Summary</h3>
+            <p><strong>Total Debits:</strong> ${formatCurrency(totalDebits)}</p>
+            <p><strong>Total Credits:</strong> ${formatCurrency(totalCredits)}</p>
+            <p><strong>Net Balance:</strong> ${netBalance >= 0 ? 'Dr. ' : 'Cr. '}${formatCurrency(Math.abs(netBalance))}</p>
+            <p><strong>Total Outstanding:</strong> ${formatCurrency(studentOutstanding.reduce((sum, s) => sum + s.outstandingBalance, 0))}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Student</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Month/Year</th>
+                <th class="text-right">Debit</th>
+                <th class="text-right">Credit</th>
+                <th class="text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredEntries.map(entry => `
+                <tr>
+                  <td>${new Date(entry.date).toLocaleDateString('en-IN')}</td>
+                  <td>${entry.studentName}</td>
+                  <td>${entry.description}</td>
+                  <td>${entry.type}</td>
+                  <td>${entry.monthYear || 'N/A'}</td>
+                  <td class="text-right debit">${entry.debitAmount > 0 ? formatCurrency(entry.debitAmount) : '-'}</td>
+                  <td class="text-right credit">${entry.creditAmount > 0 ? formatCurrency(entry.creditAmount) : '-'}</td>
+                  <td class="text-right">${entry.runningBalance >= 0 ? 'Dr. ' : 'Cr. '}${formatCurrency(Math.abs(entry.runningBalance))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const getTypeBadge = (type: string, status?: string) => {
@@ -270,16 +350,22 @@ const Ledger = () => {
         {/* Filters - Mobile Responsive */}
         <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <div>
-                <CardTitle className="text-lg sm:text-xl">Ledger Filters</CardTitle>
-                <CardDescription className="text-sm">Filter entries by various criteria</CardDescription>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <CardTitle className="text-lg sm:text-xl">Ledger Filters</CardTitle>
+                  <CardDescription className="text-sm">Filter entries by various criteria</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={printLedger} size={isMobile ? "sm" : "default"}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                  <Button variant="outline" onClick={exportLedger} size={isMobile ? "sm" : "default"}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
-              <Button variant="outline" onClick={exportLedger} size={isMobile ? "sm" : "default"}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

@@ -57,8 +57,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
-  // Calculate cumulative dues for each student
+  // Calculate cumulative dues and overdue status for each student
   const updateCumulativeDues = () => {
+    const currentDate = new Date();
+    const threeMonthsAgo = new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 1);
     const updatedInvoices = [...invoices];
     
     students.forEach(student => {
@@ -71,7 +73,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         runningDue += invoice.balanceAmount;
         const index = updatedInvoices.findIndex(inv => inv.id === invoice.id);
         if (index !== -1) {
-          updatedInvoices[index] = { ...updatedInvoices[index], cumulativeDue: runningDue };
+          // Check if invoice is overdue (unpaid for 3+ months)
+          const invoiceDate = new Date(invoice.issueDate);
+          const isOverdue = invoice.balanceAmount > 0 && invoiceDate <= threeMonthsAgo;
+          
+          updatedInvoices[index] = { 
+            ...updatedInvoices[index], 
+            cumulativeDue: runningDue,
+            status: isOverdue ? 'overdue' : updatedInvoices[index].status
+          };
         }
       });
     });
