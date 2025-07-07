@@ -28,20 +28,45 @@ import { formatCurrency } from '@/lib/utils';
 const Dashboard = () => {
   const { students, invoices, payments, ledgerEntries } = useAppContext();
 
-  // Calculate stats
+  // Calculate accurate stats
   const activeStudents = students.filter(s => s.status === 'active').length;
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  
   const totalIncomeThisMonth = payments
     .filter(p => {
       const paymentDate = new Date(p.date);
-      const currentDate = new Date();
-      return paymentDate.getMonth() === currentDate.getMonth() &&
-             paymentDate.getFullYear() === currentDate.getFullYear();
+      return paymentDate.getMonth() === currentMonth &&
+             paymentDate.getFullYear() === currentYear;
     })
     .reduce((sum, payment) => sum + payment.amount, 0);
-  const pendingDues = invoices
-    .filter(inv => inv.status === 'unpaid' || inv.status === 'partially_paid' || inv.status === 'overdue')
-    .reduce((sum, inv) => sum + inv.balanceAmount, 0);
+  
+  // Calculate cumulative pending dues (latest invoice per student)
+  const latestInvoicesWithDues = students.map(student => {
+    const studentInvoices = invoices
+      .filter(inv => inv.studentId === student.id)
+      .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
+    
+    if (studentInvoices.length === 0) return null;
+    
+    const latestInvoice = studentInvoices[0];
+    const totalDue = studentInvoices
+      .filter(inv => inv.status === 'unpaid' || inv.status === 'partially_paid' || inv.status === 'overdue')
+      .reduce((sum, inv) => sum + inv.balanceAmount, 0);
+    
+    return totalDue > 0 ? { studentId: student.id, totalDue } : null;
+  }).filter(Boolean);
+  
+  const pendingDues = latestInvoicesWithDues.reduce((sum, item) => sum + (item?.totalDue || 0), 0);
   const totalAdvanceBalance = students.reduce((sum, student) => sum + student.advanceBalance, 0);
+  
+  // Calculate overdue invoices (3+ months old)
+  const threeMonthsAgo = new Date(currentYear, currentMonth - 3, 1);
+  const overdueInvoices = invoices.filter(inv => 
+    (inv.status === 'unpaid' || inv.status === 'partially_paid' || inv.status === 'overdue') &&
+    new Date(inv.issueDate) <= threeMonthsAgo
+  ).length;
   
   // Recent transactions (last 5)
   const recentTransactions = [...ledgerEntries]
@@ -56,13 +81,24 @@ const Dashboard = () => {
     { name: 'Overdue', value: invoices.filter(inv => inv.status === 'overdue').length }
   ].filter(item => item.value > 0);
 
-  // Monthly revenue data (mock data for now)
-  const monthlyRevenueData = [
-    { name: 'Jan', amount: 25000 },
-    { name: 'Feb', amount: 30000 },
-    { name: 'Mar', amount: 28000 },
-    { name: 'Apr', amount: totalIncomeThisMonth || 32000 }
-  ];
+  // Calculate actual monthly revenue data
+  const monthlyRevenueData = [];
+  for (let i = 5; i >= 0; i--) {
+    const monthDate = new Date(currentYear, currentMonth - i, 1);
+    const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
+    const monthPayments = payments
+      .filter(p => {
+        const paymentDate = new Date(p.date);
+        return paymentDate.getMonth() === monthDate.getMonth() &&
+               paymentDate.getFullYear() === monthDate.getFullYear();
+      })
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    
+    monthlyRevenueData.push({
+      name: monthName,
+      amount: monthPayments
+    });
+  }
 
   // Colors for pie chart
   const COLORS = ['#4CAF50', '#2196F3', '#FFC107', '#F44336'];
@@ -104,7 +140,9 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(pendingDues)}</div>
-            <p className="text-xs text-muted-foreground">{invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'partially_paid' || inv.status === 'overdue').length} unpaid invoices</p>
+            <p className="text-xs text-muted-foreground">
+              {latestInvoicesWithDues.length} students with dues • {overdueInvoices} overdue invoices
+            </p>
           </CardContent>
         </Card>
         <Card>

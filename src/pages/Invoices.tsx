@@ -36,7 +36,9 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
-  CheckCircle
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { formatCurrency, formatNepaliMonthYear } from '@/lib/utils';
 
@@ -44,8 +46,10 @@ const Invoices = () => {
   const { invoices, students } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<string>('issueDate');
+  const [sortField, setSortField] = useState<string>('overdue');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Calculate enhanced invoice data with cumulative dues
   const enhancedInvoices = invoices.map(invoice => {
@@ -85,12 +89,26 @@ const Invoices = () => {
     return matchesSearch && matchesStatus;
   });
   
-  // Sort invoices
+  // Sort invoices with overdue prioritization
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-    if (sortField === 'issueDate') {
-      return sortDirection === 'asc' 
-        ? new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime()
-        : new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+    // Primary sort: Always prioritize overdue invoices
+    if (sortField === 'overdue' || sortField === 'issueDate') {
+      const aDaysOverdue = a.status === 'overdue' ? 
+        Math.floor((new Date().getTime() - new Date(a.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      const bDaysOverdue = b.status === 'overdue' ? 
+        Math.floor((new Date().getTime() - new Date(b.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      
+      if (aDaysOverdue !== bDaysOverdue) {
+        return bDaysOverdue - aDaysOverdue; // Most overdue first
+      }
+      
+      // Secondary sort by cumulative due (highest first)
+      if (a.cumulativeDue !== b.cumulativeDue) {
+        return b.cumulativeDue - a.cumulativeDue;
+      }
+      
+      // Tertiary sort by issue date (latest first)
+      return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
     }
     
     if (sortField === 'dueDate') {
@@ -112,7 +130,7 @@ const Invoices = () => {
     }
     
     if (sortField === 'status') {
-      const statusOrder = { paid: 0, partially_paid: 1, unpaid: 2, overdue: 3 };
+      const statusOrder = { overdue: 0, unpaid: 1, partially_paid: 2, paid: 3 };
       return sortDirection === 'asc' 
         ? statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder]
         : statusOrder[b.status as keyof typeof statusOrder] - statusOrder[a.status as keyof typeof statusOrder];
@@ -127,13 +145,19 @@ const Invoices = () => {
     return 0;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(sortedInvoices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedInvoices = sortedInvoices.slice(startIndex, startIndex + itemsPerPage);
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection(field === 'overdue' ? 'desc' : 'asc');
     }
+    setCurrentPage(1); // Reset to first page when sorting
   };
 
   const getStatusBadge = (status: string, isLatest: boolean) => {
@@ -277,7 +301,7 @@ const Invoices = () => {
           </Button>
         </div>
 
-        {filteredInvoices.length === 0 ? (
+        {paginatedInvoices.length === 0 ? (
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardContent className="flex flex-col items-center justify-center py-20">
               <DollarSign className="h-20 w-20 text-gray-400 mb-6" />
@@ -333,7 +357,7 @@ const Invoices = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedInvoices.map((invoice) => (
+                  {paginatedInvoices.map((invoice) => (
                     <TableRow 
                       key={invoice.id} 
                       className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b ${
@@ -379,6 +403,42 @@ const Invoices = () => {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pagination */}
+        {sortedInvoices.length > itemsPerPage && (
+          <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedInvoices.length)} of {sortedInvoices.length} invoices
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="text-sm font-medium">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

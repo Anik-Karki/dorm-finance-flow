@@ -35,7 +35,9 @@ import {
   ArrowDownUp,
   Search,
   Plus,
-  CreditCard
+  CreditCard,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { formatCurrency } from '@/lib/utils';
 
@@ -45,6 +47,8 @@ const Payments = () => {
   const [sortField, setSortField] = useState<string | null>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Filter payments based on search term
   const filteredPayments = payments.filter(payment => 
@@ -78,6 +82,11 @@ const Payments = () => {
     return 0;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedPayments = sortedPayments.slice(startIndex, startIndex + itemsPerPage);
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -85,6 +94,7 @@ const Payments = () => {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1); // Reset to first page when sorting
   };
   
   const handleAddPayment = (paymentData: any) => {
@@ -136,7 +146,7 @@ const Payments = () => {
           </Dialog>
         </div>
 
-        {filteredPayments.length === 0 ? (
+        {paginatedPayments.length === 0 ? (
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardContent className="flex flex-col items-center justify-center py-10">
               <p className="text-muted-foreground text-lg">No payments match your search criteria.</p>
@@ -180,7 +190,7 @@ const Payments = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedPayments.map((payment) => (
+                  {paginatedPayments.map((payment) => (
                     <TableRow key={payment.id} className="hover:bg-blue-50/50 transition-colors">
                       <TableCell className="font-medium text-blue-600">{payment.id}</TableCell>
                       <TableCell>
@@ -208,6 +218,42 @@ const Payments = () => {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pagination */}
+        {sortedPayments.length > itemsPerPage && (
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedPayments.length)} of {sortedPayments.length} payments
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="text-sm font-medium">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
